@@ -207,6 +207,85 @@
     .right{ text-align:right; }
 
     .smallnote{ font-size: 12px; color: var(--muted); }
+    /* =========================
+   Mobile Responsive Improve
+   ========================= */
+@media (max-width: 640px){
+
+  .wrap{
+    padding: 0 12px;
+    margin: 12px auto 18px;
+  }
+
+  h1{
+    font-size: 16px;
+    line-height: 1.35;
+  }
+  .hint{
+    font-size: 12px;
+  }
+
+  .tabs{
+    gap: 8px;
+    margin: 10px 0 12px;
+  }
+  .tab{
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .card{
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  /* 核心：手机端改成单列 */
+  .grid{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .field,
+  .field.w4,
+  .field.w6,
+  .field.w12{
+    grid-column: span 12 !important;
+  }
+
+  input, select, textarea{
+    padding: 12px 12px;
+    font-size: 14px;
+    border-radius: 12px;
+  }
+  label{
+    font-size: 12px;
+    margin-bottom: 5px;
+  }
+
+  .row{
+    gap: 8px;
+  }
+  .pill{
+    font-size: 12px;
+    padding: 6px 8px;
+    white-space: normal;
+    line-height: 1.35;
+  }
+
+  .btn-ghost{
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 12px;
+  }
+
+  .status{
+    line-height: 1.4;
+  }
+
+  table{
+    min-width: 760px;
+  }
+}
   </style>
 </head>
 
