@@ -296,18 +296,6 @@
       font-weight: 650;
     }
 
-    .twoCol {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    @media (max-width: 980px) {
-      .twoCol {
-        grid-template-columns: 1fr;
-      }
-    }
-
     .box {
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -364,7 +352,6 @@
       text-align: right;
     }
 
-    /* Mobile */
     @media (max-width: 640px) {
       .wrap {
         padding: 0 12px;
@@ -445,7 +432,6 @@
 </head>
 
 <body>
-  <!-- Header -->
   <div class="header">
     <div class="header-inner">
       <div class="header-left">
@@ -462,11 +448,9 @@
   <div class="wrap">
     <h1>注射净活度计算（N 次注射：分针/空针 = 剂量 − 背景）</h1>
     <div class="hint">
-      每次注射：Split@Inj = (分针剂量−分针背景) 校正到注射时刻；Empty@Inj = (空针剂量−空针背景) 从注射后测量回推到注射时刻；Net = Split@Inj − Empty@Inj。支持任意 N
-      次注射并合计。
+      每次注射：Split@Inj = (分针剂量−分针背景) 校正到注射时刻；Empty@Inj = (空针剂量−空针背景) 从注射后测量回推到注射时刻；Net = Split@Inj − Empty@Inj。支持任意 N 次注射并合计。
     </div>
 
-    <!-- 试验信息记录 -->
     <div class="card" style="margin-bottom:14px;">
       <div class="row">
         <span class="pill">试验信息（将写入记录与 CSV）</span>
@@ -488,7 +472,6 @@
           <input id="exp_cellline" placeholder="例如：4T1 / CT26 / BxPC-3 ..." />
         </div>
 
-        <!-- 时间点计划 -->
         <div class="field w12">
           <div class="hr"></div>
           <div class="row" style="margin-bottom:6px;">
@@ -517,6 +500,7 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -527,7 +511,6 @@
       <div class="tab" data-tab="log">计算记录（CSV 导出）</div>
     </div>
 
-    <!-- 注射净活度 -->
     <div id="inj" class="card">
       <div class="row">
         <span class="pill">单位自动换算：Bq / MBq / µCi / mCi</span>
@@ -535,7 +518,6 @@
       </div>
       <div class="hr"></div>
 
-      <!-- Top config -->
       <div class="grid">
         <div class="field w4">
           <label>核素（按类别分组）</label>
@@ -559,9 +541,7 @@
           <div class="row" style="justify-content: space-between;">
             <div class="row">
               <span class="pill">注射次数 N</span>
-              <select id="inj_count" style="max-width: 140px;">
-                <!-- options injected -->
-              </select>
+              <select id="inj_count" style="max-width: 140px;"></select>
               <button id="inj_add" class="primary" type="button">+ 添加一次</button>
               <button id="inj_remove" class="danger" type="button">− 删除最后一次</button>
             </div>
@@ -577,9 +557,7 @@
           <div id="inj_container"></div>
         </div>
 
-        <div class="field w12">
-          <div class="hr"></div>
-        </div>
+        <div class="field w12"><div class="hr"></div></div>
 
         <div class="field w12">
           <label>状态</label>
@@ -596,14 +574,12 @@
       </div>
     </div>
 
-    <!-- 衰变计算 -->
     <div id="decay" class="card" style="display:none;">
       <div class="row"><span class="pill">At = A0 · exp(-ln2 · Δt / T1/2)</span></div>
       <div class="hr"></div>
       <div class="grid">
         <div class="field w4"><label>核素（按类别分组）</label><select id="dec_iso"></select></div>
-        <div class="field w4"><label>半衰期 T1/2（秒）</label><input id="dec_hl" class="mono" type="number" step="any" />
-        </div>
+        <div class="field w4"><label>半衰期 T1/2（秒）</label><input id="dec_hl" class="mono" type="number" step="any" /></div>
         <div class="field w4">
           <label>输出单位</label>
           <select id="dec_out_unit">
@@ -635,9 +611,7 @@
         <div class="field w6"><label>起始时间（t0）</label><input id="dec_t0" type="datetime-local" /></div>
         <div class="field w6"><label>结束时间（t1）</label><input id="dec_t1" type="datetime-local" /></div>
 
-        <div class="field w12"><label>状态</label>
-          <div id="dec_status" class="status mono">-</div>
-        </div>
+        <div class="field w12"><label>状态</label><div id="dec_status" class="status mono">-</div></div>
 
         <div class="field w12">
           <label>结果</label>
@@ -647,13 +621,11 @@
             <div class="pill">At（Bq）：<span class="mono" id="dec_bq">-</span></div>
             <div class="pill">Bq / cal：<span class="mono" id="dec_bq_div">-</span></div>
           </div>
-          <div class="row" style="margin-top:12px;"><button class="primary" id="dec_save" type="button">保存记录</button>
-          </div>
+          <div class="row" style="margin-top:12px;"><button class="primary" id="dec_save" type="button">保存记录</button></div>
         </div>
       </div>
     </div>
 
-    <!-- 核素表 JSON -->
     <div id="iso" class="card" style="display:none;">
       <div class="row">
         <span class="pill">核素表 JSON（可编辑）</span>
@@ -676,7 +648,6 @@
       </div>
     </div>
 
-    <!-- 记录与导出 -->
     <div id="log" class="card" style="display:none;">
       <div class="row"><span class="pill">计算记录</span><span class="pill">结构化 CSV（按列导出）</span></div>
       <div class="hr"></div>
@@ -710,9 +681,36 @@
         明细字段较多，建议以 CSV 为准；页面表格为快速概览。注射明细已以 injections_json 字段写入 CSV（可用于后处理/统计）。
       </div>
     </div>
+
   </div>
 
   <script>
+    /***********************
+     * v5 最终修复版要点：
+     * 1) 全局错误捕获：任何 JS 报错都会显示在“状态”里，避免“按钮/下拉全失效但看不见原因”
+     * 2) setIsotopes() 不再在初始化早期调用 calcAll()，避免函数缺失/DOM未就绪导致脚本中断
+     * 3) syncHL() 容错匹配 value/name（trim + 大小写）
+     ***********************/
+
+    /* ========= global fatal helper ========= */
+    function showFatal(msg, err) {
+      try {
+        console.error(msg, err || "");
+        const inj = document.getElementById("inj_status");
+        if (inj) { inj.textContent = msg; inj.className = "status mono bad"; }
+        const dec = document.getElementById("dec_status");
+        if (dec) { dec.textContent = msg; dec.className = "status mono bad"; }
+        const plan = document.getElementById("plan_status");
+        if (plan) { plan.textContent = msg; plan.className = "status mono bad"; }
+      } catch { }
+    }
+    window.addEventListener("error", (e) => {
+      showFatal(`JS 运行错误：${e?.message || "unknown"}`, e?.error);
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      showFatal(`JS Promise 错误：${e?.reason?.message || String(e?.reason || "unknown")}`, e?.reason);
+    });
+
     /* ========= isotope label helpers ========= */
     const SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
     function toSuperscriptDigits(numStr) {
@@ -790,7 +788,8 @@
     function saveExperiment(obj) { localStorage.setItem(EXP_KEY, JSON.stringify(obj)); }
 
     function updateHeaderCount() {
-      document.getElementById("header_log_hint").textContent = `当前记录数：${loadLog().length}`;
+      const el = document.getElementById("header_log_hint");
+      if (el) el.textContent = `当前记录数：${loadLog().length}`;
     }
 
     function escapeCSV(s) {
@@ -800,15 +799,20 @@
     }
 
     /* ========= tabs ========= */
-    document.querySelectorAll(".tab").forEach(t => {
-      t.addEventListener("click", () => {
-        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-        t.classList.add("active");
-        const tab = t.dataset.tab;
-        ["inj", "decay", "iso", "log"].forEach(id => document.getElementById(id).style.display = (id === tab) ? "" : "none");
-        if (tab === "log") renderLogOverview();
+    function bindTabs() {
+      document.querySelectorAll(".tab").forEach(t => {
+        t.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+          t.classList.add("active");
+          const tab = t.dataset.tab;
+          ["inj", "decay", "iso", "log"].forEach(id => {
+            const sec = document.getElementById(id);
+            if (sec) sec.style.display = (id === tab) ? "" : "none";
+          });
+          if (tab === "log") renderLogOverview();
+        });
       });
-    });
+    }
 
     /* ========= isotopes grouped ========= */
     let isotopes = [];
@@ -841,25 +845,20 @@
         const arr = groupMap.get(cat) || [];
         if (!arr.length) continue;
         out.push(`<optgroup label="${cat}">`);
-        arr.forEach(x => {
-          out.push(`<option value="${String(x.name).trim()}">${optLabel(x)}</option>`);
-        });
+        arr.forEach(x => out.push(`<option value="${String(x.name).trim()}">${optLabel(x)}</option>`));
         out.push(`</optgroup>`);
       }
       return out.join("");
     }
 
-    /* =========================
-       FIX 1: setIsotopes 更稳健
-       - 渲染 options 后，确保 select 当前 value 一定能在 isotopes.name 中命中
-       - 命中失败就强制选择第一个核素
-       ========================= */
+    /* ======= 关键修复：这里不再触发 calcAll() ======= */
     function setIsotopes(list) {
       isotopes = list.slice();
       const html = groupedOptHTML(isotopes);
 
       const injSel = document.getElementById("inj_iso");
       const decSel = document.getElementById("dec_iso");
+      if (!injSel || !decSel) return;
 
       injSel.innerHTML = html;
       decSel.innerHTML = html;
@@ -877,68 +876,64 @@
 
       syncHL("inj");
       syncHL("dec");
-      calcAll();
     }
 
-    /* =========================
-       FIX 2: syncHL 加容错
-       - 先严格匹配，再做大小写/空格宽松匹配
-       - 找不到就 console.warn，便于你定位是否 name/value 不一致
-       ========================= */
     function syncHL(which) {
       const sel = (which === "inj") ? document.getElementById("inj_iso") : document.getElementById("dec_iso");
       const hl = (which === "inj") ? document.getElementById("inj_hl") : document.getElementById("dec_hl");
+      if (!sel || !hl) return;
 
       const v = String(sel.value ?? "").trim();
       let found = isotopes.find(x => String(x.name).trim() === v);
-
       if (!found) {
         const v2 = v.toUpperCase();
         found = isotopes.find(x => String(x.name).trim().toUpperCase() === v2);
       }
-
-      if (found) {
-        hl.value = found.half_life_s;
-      } else {
-        console.warn(`[syncHL] cannot find isotope for value="${sel.value}"`);
-      }
+      if (found) hl.value = found.half_life_s;
+      else console.warn(`[syncHL] cannot find isotope for value="${sel.value}"`);
     }
 
     function initIsoJSON() {
-      document.getElementById("iso_json").value = JSON.stringify(DEFAULT_ISOTOPES, null, 2);
+      const el = document.getElementById("iso_json");
+      if (el) el.value = JSON.stringify(DEFAULT_ISOTOPES, null, 2);
     }
 
-    document.getElementById("iso_apply").addEventListener("click", () => {
+    function bindIsoJSONButtons() {
+      const applyBtn = document.getElementById("iso_apply");
+      const resetBtn = document.getElementById("iso_reset");
       const status = document.getElementById("iso_status");
-      try {
-        const parsed = JSON.parse(document.getElementById("iso_json").value);
-        if (!Array.isArray(parsed)) throw new Error("JSON 顶层必须是数组。");
-        const cleaned = parsed.map((x, i) => {
-          const name = String(x?.name ?? "").trim();
-          const hl = Number(x?.half_life_s);
-          const category = normalizeCategory(x?.category);
-          const labelRaw = (x && typeof x === "object" && "label" in x) ? String(x.label ?? "").trim() : "";
-          if (!name) throw new Error(`第 ${i + 1} 项缺少 name。`);
-          if (!isFinite(hl) || hl <= 0) throw new Error(`第 ${i + 1} 项 half_life_s 无效。`);
-          const label = labelRaw || makeStandardIsotopeLabel(name);
-          return { name, half_life_s: hl, category, label };
-        });
-        setIsotopes(cleaned);
-        status.textContent = "OK：已应用核素表（含类别分组）。";
-        status.className = "status mono good";
-      } catch (e) {
-        status.textContent = "错误：" + (e?.message ?? String(e));
-        status.className = "status mono bad";
-      }
-    });
 
-    document.getElementById("iso_reset").addEventListener("click", () => {
-      initIsoJSON();
-      setIsotopes(DEFAULT_ISOTOPES);
-      const status = document.getElementById("iso_status");
-      status.textContent = "已恢复默认核素表。";
-      status.className = "status mono good";
-    });
+      if (applyBtn) applyBtn.addEventListener("click", () => {
+        try {
+          const parsed = JSON.parse(document.getElementById("iso_json").value);
+          if (!Array.isArray(parsed)) throw new Error("JSON 顶层必须是数组。");
+          const cleaned = parsed.map((x, i) => {
+            const name = String(x?.name ?? "").trim();
+            const hl = Number(x?.half_life_s);
+            const category = normalizeCategory(x?.category);
+            const labelRaw = (x && typeof x === "object" && "label" in x) ? String(x.label ?? "").trim() : "";
+            if (!name) throw new Error(`第 ${i + 1} 项缺少 name。`);
+            if (!isFinite(hl) || hl <= 0) throw new Error(`第 ${i + 1} 项 half_life_s 无效。`);
+            const label = labelRaw || makeStandardIsotopeLabel(name);
+            return { name, half_life_s: hl, category, label };
+          });
+          setIsotopes(cleaned);
+
+          if (status) { status.textContent = "OK：已应用核素表（含类别分组）。"; status.className = "status mono good"; }
+          // 核素表更新后，再统一 calcAll（此时页面结构已完整）
+          calcAll();
+        } catch (e) {
+          if (status) { status.textContent = "错误：" + (e?.message ?? String(e)); status.className = "status mono bad"; }
+        }
+      });
+
+      if (resetBtn) resetBtn.addEventListener("click", () => {
+        initIsoJSON();
+        setIsotopes(DEFAULT_ISOTOPES);
+        if (status) { status.textContent = "已恢复默认核素表。"; status.className = "status mono good"; }
+        calcAll();
+      });
+    }
 
     /* ========= experiment info ========= */
     function initExperimentInfo() {
@@ -946,6 +941,8 @@
       const exp_probe = document.getElementById("exp_probe");
       const exp_date = document.getElementById("exp_date");
       const exp_cellline = document.getElementById("exp_cellline");
+
+      if (!exp_probe || !exp_date || !exp_cellline) return;
 
       if (saved) {
         exp_probe.value = saved.probe_name ?? "";
@@ -968,11 +965,13 @@
       return obj;
     }
 
-    ["input", "change"].forEach(evt => {
-      document.getElementById("exp_probe").addEventListener(evt, () => { readExperimentInfo(); });
-      document.getElementById("exp_date").addEventListener(evt, () => { readExperimentInfo(); });
-      document.getElementById("exp_cellline").addEventListener(evt, () => { readExperimentInfo(); });
-    });
+    function bindExperimentInfo() {
+      ["input", "change"].forEach(evt => {
+        document.getElementById("exp_probe")?.addEventListener(evt, () => readExperimentInfo());
+        document.getElementById("exp_date")?.addEventListener(evt, () => readExperimentInfo());
+        document.getElementById("exp_cellline")?.addEventListener(evt, () => readExperimentInfo());
+      });
+    }
 
     /* ========= N injection dynamic renderer ========= */
     const MIN_N = 1;
@@ -981,24 +980,22 @@
     function getSavedN() {
       const x = Number(localStorage.getItem(N_KEY) || "");
       if (isFinite(x) && x >= MIN_N && x <= MAX_N) return x;
-      return 3; // default
+      return 3;
     }
-    function saveN(n) {
-      localStorage.setItem(N_KEY, String(n));
-    }
+    function saveN(n) { localStorage.setItem(N_KEY, String(n)); }
 
     function fillNOptions() {
       const sel = document.getElementById("inj_count");
+      if (!sel) return;
       const opts = [];
-      for (let i = MIN_N; i <= MAX_N; i++) {
-        opts.push(`<option value="${i}">${i}</option>`);
-      }
+      for (let i = MIN_N; i <= MAX_N; i++) opts.push(`<option value="${i}">${i}</option>`);
       sel.innerHTML = opts.join("");
       sel.value = String(getSavedN());
     }
 
     function getN() {
-      const v = Number(document.getElementById("inj_count").value);
+      const sel = document.getElementById("inj_count");
+      const v = Number(sel?.value);
       if (isFinite(v) && v >= MIN_N && v <= MAX_N) return v;
       return getSavedN();
     }
@@ -1009,7 +1006,7 @@
       return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
 
-    function injBlockHTML(i) { // i: 1-based
+    function injBlockHTML(i) {
       const nowStr = getCurrentDateTimeStr();
       return `
       <div class="box" style="margin-top:12px;">
@@ -1019,7 +1016,6 @@
         </div>
 
         <div class="grid">
-          <!-- Row 1: Times -->
           <div class="field w4">
             <label>分针测量时间（Before${i}）</label>
             <input data-k="t_before" data-i="${i}" type="datetime-local" value="${nowStr}">
@@ -1035,7 +1031,6 @@
 
           <div class="field w12"><div class="hr" style="margin: 8px 0;"></div></div>
 
-          <!-- Row 2: Doses & Backgrounds -->
           <div class="field w3" style="grid-column: span 3;">
             <label>分针剂量${i}</label>
             <input data-k="s_dose" data-i="${i}" type="number" step="any" value="${i === 1 ? 65 : 0}">
@@ -1053,7 +1048,6 @@
             <input data-k="e_bg" data-i="${i}" type="number" step="any" value="0">
           </div>
 
-          <!-- Row 3: Unit -->
           <div class="field w12">
             <label>注射${i}剂量单位</label>
             <select data-k="unit" data-i="${i}">
@@ -1065,7 +1059,6 @@
           </div>
         </div>
 
-        <!-- Row 4: Results Pill -->
         <div class="row" style="margin-top:12px;">
           <div class="pill">分针差值${i}：<span class="mono" data-out="s_diff" data-i="${i}">-</span></div>
           <div class="pill">空针差值${i}：<span class="mono" data-out="e_diff" data-i="${i}">-</span></div>
@@ -1079,16 +1072,16 @@
           <div class="pill out">净注射${i}：<span class="mono" data-out="net" data-i="${i}">-</span></div>
         </div>
       </div>
-    `;
+      `;
     }
 
     function renderInjections(n) {
       const container = document.getElementById("inj_container");
+      if (!container) return;
       const blocks = [];
       for (let i = 1; i <= n; i++) blocks.push(injBlockHTML(i));
       container.innerHTML = blocks.join("");
 
-      // bind events for newly rendered nodes
       container.querySelectorAll("input, select").forEach(el => {
         el.addEventListener("input", calcAll);
         el.addEventListener("change", calcAll);
@@ -1097,7 +1090,8 @@
 
     function setInjectionCount(n) {
       n = Math.max(MIN_N, Math.min(MAX_N, Number(n)));
-      document.getElementById("inj_count").value = String(n);
+      const sel = document.getElementById("inj_count");
+      if (sel) sel.value = String(n);
       saveN(n);
       renderInjections(n);
       calcAll();
@@ -1105,6 +1099,7 @@
 
     function computeAvgInjectionPlan() {
       const s = document.getElementById("plan_status");
+      if (!s) return null;
       s.className = "status mono";
 
       const n = getN();
@@ -1126,6 +1121,7 @@
 
       const sumMs = injTimes.reduce((acc, d) => acc + d.getTime(), 0);
       const avgMs = Math.round(sumMs / n);
+
       const avg = new Date(avgMs);
       const t30 = new Date(avgMs + 30 * 60 * 1000);
       const t60 = new Date(avgMs + 60 * 60 * 1000);
@@ -1142,7 +1138,6 @@
       return { avg, t30, t60, t120 };
     }
 
-    /* ========= Read injection inputs ========= */
     function readInjection(i) {
       const getInput = (k) => document.querySelector(`#inj_container [data-k="${k}"][data-i="${i}"]`);
       const tBefore = parseDTLocal(getInput("t_before").value);
@@ -1155,7 +1150,6 @@
       const eBg = Number(getInput("e_bg").value);
 
       const unit = getInput("unit").value;
-
       return { index: i, tBefore, tInj, tAfter, sDose, sBg, eDose, eBg, unit };
     }
 
@@ -1213,14 +1207,7 @@
         ok: true,
         warn,
         raw: data,
-        derived: {
-          sDiff, eDiff,
-          dtS, dtE,
-          split_corr_out: sOut,
-          empty_corr_out: eOut,
-          net_out: netOut,
-          net_bq: net_Bq
-        }
+        derived: { sDiff, eDiff, dtS, dtE, split_corr_out: sOut, empty_corr_out: eOut, net_out: netOut, net_bq: net_Bq }
       };
     }
 
@@ -1236,11 +1223,9 @@
         if (!r.ok) errors.push(r.msg);
         else warns.push(...r.warn);
       }
-
       return { n, results, errors, warns };
     }
 
-    /* ========= injection calc wrapper ========= */
     function calcInj() {
       const inj_status = document.getElementById("inj_status");
       inj_status.className = "status mono";
@@ -1267,7 +1252,6 @@
       }
     }
 
-    /* ========= decay tab ========= */
     function calcDecay() {
       const hl = Number(document.getElementById("dec_hl").value);
       const outUnit = document.getElementById("dec_out_unit").value;
@@ -1298,10 +1282,15 @@
     }
 
     function calcAll() {
-      calcInj();
-      calcDecay();
-      computeAvgInjectionPlan();
-      updateHeaderCount();
+      try {
+        calcInj();
+        calcDecay();
+        computeAvgInjectionPlan();
+        updateHeaderCount();
+      } catch (e) {
+        showFatal("calcAll 执行失败（请看控制台错误）", e);
+        throw e;
+      }
     }
 
     /* ========= log overview ========= */
@@ -1313,6 +1302,7 @@
     function renderLogOverview() {
       const logs = loadLog();
       const tb = document.getElementById("log_tbody");
+      if (!tb) return;
       tb.innerHTML = logs.map(r => {
         return `<tr>
         <td class="mono">${escapeHTML(r.saved_at || "")}</td>
@@ -1368,177 +1358,195 @@
       URL.revokeObjectURL(url);
     }
 
-    document.getElementById("header_export_csv").addEventListener("click", exportCSVFromLogs);
-    document.getElementById("export_csv").addEventListener("click", exportCSVFromLogs);
+    function bindExportAndClear() {
+      document.getElementById("header_export_csv")?.addEventListener("click", exportCSVFromLogs);
+      document.getElementById("export_csv")?.addEventListener("click", exportCSVFromLogs);
 
-    document.getElementById("clear_log").addEventListener("click", () => {
-      if (!confirm("确定清空所有记录吗？此操作不可恢复。")) return;
-      localStorage.removeItem(LOG_KEY);
-      renderLogOverview();
-      updateHeaderCount();
-    });
+      document.getElementById("clear_log")?.addEventListener("click", () => {
+        if (!confirm("确定清空所有记录吗？此操作不可恢复。")) return;
+        localStorage.removeItem(LOG_KEY);
+        renderLogOverview();
+        updateHeaderCount();
+      });
+    }
 
     /* ========= save record ========= */
-    document.getElementById("inj_save").addEventListener("click", () => {
-      calcAll();
+    function bindSaveButtons() {
+      document.getElementById("inj_save")?.addEventListener("click", () => {
+        calcAll();
 
-      const exp = readExperimentInfo();
-      const iso = document.getElementById("inj_iso").value;
-      const hl = Number(document.getElementById("inj_hl").value);
-      const outUnit = document.getElementById("inj_out_unit").value;
+        const exp = readExperimentInfo();
+        const iso = document.getElementById("inj_iso").value;
+        const hl = Number(document.getElementById("inj_hl").value);
+        const outUnit = document.getElementById("inj_out_unit").value;
 
-      const { n, results, errors } = calcAllInjections();
-      if (errors.length) {
-        alert("当前输入不完整或存在错误，无法保存记录。请检查时间/剂量/背景/单位。");
-        return;
-      }
+        const { n, results, errors } = calcAllInjections();
+        if (errors.length) {
+          alert("当前输入不完整或存在错误，无法保存记录。请检查时间/剂量/背景/单位。");
+          return;
+        }
 
-      const plan = computeAvgInjectionPlan();
-      const avgStr = plan ? fmtDateTimeLocal(plan.avg) : "";
-      const t30Str = plan ? fmtDateTimeLocal(plan.t30) : "";
-      const t60Str = plan ? fmtDateTimeLocal(plan.t60) : "";
-      const t120Str = plan ? fmtDateTimeLocal(plan.t120) : "";
+        const plan = computeAvgInjectionPlan();
+        const avgStr = plan ? fmtDateTimeLocal(plan.avg) : "";
+        const t30Str = plan ? fmtDateTimeLocal(plan.t30) : "";
+        const t60Str = plan ? fmtDateTimeLocal(plan.t60) : "";
+        const t120Str = plan ? fmtDateTimeLocal(plan.t120) : "";
 
-      const injections = results.map(r => {
-        const raw = r.raw;
-        const d = r.derived;
-        return {
-          index: raw.index,
-          unit: raw.unit,
-          times: {
-            before: isoLocalString(raw.tBefore),
-            inj: isoLocalString(raw.tInj),
-            after: isoLocalString(raw.tAfter),
-          },
-          split: { dose: raw.sDose, bg: raw.sBg, diff: d.sDiff },
-          empty: { dose: raw.eDose, bg: raw.eBg, diff: d.eDiff },
-          dt_s: d.dtS,
-          dt_e: d.dtE,
-          split_corr_out: Number(d.split_corr_out.toFixed(8)),
-          empty_corr_out: Number(d.empty_corr_out.toFixed(8)),
-          net_out: Number(d.net_out.toFixed(8))
+        const injections = results.map(r => {
+          const raw = r.raw;
+          const d = r.derived;
+          return {
+            index: raw.index,
+            unit: raw.unit,
+            times: {
+              before: isoLocalString(raw.tBefore),
+              inj: isoLocalString(raw.tInj),
+              after: isoLocalString(raw.tAfter),
+            },
+            split: { dose: raw.sDose, bg: raw.sBg, diff: d.sDiff },
+            empty: { dose: raw.eDose, bg: raw.eBg, diff: d.eDiff },
+            dt_s: d.dtS,
+            dt_e: d.dtE,
+            split_corr_out: Number(d.split_corr_out.toFixed(8)),
+            empty_corr_out: Number(d.empty_corr_out.toFixed(8)),
+            net_out: Number(d.net_out.toFixed(8))
+          };
+        });
+
+        const row = {
+          saved_at: new Date().toISOString(),
+          probe_name: exp.probe_name,
+          exp_date: exp.exp_date,
+          tumor_cellline: exp.tumor_cellline,
+          isotope: iso,
+          half_life_s: hl,
+          out_unit: outUnit,
+          injection_count: n,
+          avg_inj_time: avgStr,
+          tp_30min: t30Str,
+          tp_60min: t60Str,
+          tp_120min: t120Str,
+          net_sum_out: document.getElementById("net_sum").textContent,
+          injections_json: JSON.stringify(injections),
+          note: document.getElementById("inj_status").textContent || ""
         };
+
+        addLogRow(row);
+        document.querySelector('.tab[data-tab="log"]')?.click();
+        renderLogOverview();
       });
 
-      const row = {
-        saved_at: new Date().toISOString(),
-        probe_name: exp.probe_name,
-        exp_date: exp.exp_date,
-        tumor_cellline: exp.tumor_cellline,
-        isotope: iso,
-        half_life_s: hl,
-        out_unit: outUnit,
-        injection_count: n,
-        avg_inj_time: avgStr,
-        tp_30min: t30Str,
-        tp_60min: t60Str,
-        tp_120min: t120Str,
-        net_sum_out: document.getElementById("net_sum").textContent,
-        injections_json: JSON.stringify(injections),
-        note: document.getElementById("inj_status").textContent || ""
-      };
+      document.getElementById("dec_save")?.addEventListener("click", () => {
+        calcDecay();
+        const exp = readExperimentInfo();
+        const iso = document.getElementById("dec_iso").value;
+        const hl = Number(document.getElementById("dec_hl").value);
+        const outUnit = document.getElementById("dec_out_unit").value;
+        const note = document.getElementById("dec_status").textContent || "";
 
-      addLogRow(row);
-      document.querySelector('.tab[data-tab="log"]').click();
-      renderLogOverview();
-    });
+        const row = {
+          saved_at: new Date().toISOString(),
+          probe_name: exp.probe_name,
+          exp_date: exp.exp_date,
+          tumor_cellline: exp.tumor_cellline,
+          isotope: iso,
+          half_life_s: hl,
+          out_unit: outUnit,
+          injection_count: "",
+          avg_inj_time: "",
+          tp_30min: "",
+          tp_60min: "",
+          tp_120min: "",
+          net_sum_out: `At=${document.getElementById("dec_at").textContent}`,
+          injections_json: JSON.stringify({
+            type: "decay",
+            A0: `${document.getElementById("dec_a0").value} ${document.getElementById("dec_a0_unit").value}`,
+            t0: document.getElementById("dec_t0").value,
+            t1: document.getElementById("dec_t1").value,
+            dt_s: document.getElementById("dec_dt").textContent,
+            At_out: document.getElementById("dec_at").textContent,
+            At_Bq: document.getElementById("dec_bq").textContent,
+            cal: document.getElementById("dec_cal").value,
+            Bq_div_cal: document.getElementById("dec_bq_div").textContent
+          }),
+          note
+        };
 
-    /* ========= decay save ========= */
-    document.getElementById("dec_save").addEventListener("click", () => {
-      calcDecay();
-      const exp = readExperimentInfo();
-      const iso = document.getElementById("dec_iso").value;
-      const hl = Number(document.getElementById("dec_hl").value);
-      const outUnit = document.getElementById("dec_out_unit").value;
-      const note = document.getElementById("dec_status").textContent || "";
+        addLogRow(row);
+        document.querySelector('.tab[data-tab="log"]')?.click();
+        renderLogOverview();
+      });
+    }
 
-      const row = {
-        saved_at: new Date().toISOString(),
-        probe_name: exp.probe_name,
-        exp_date: exp.exp_date,
-        tumor_cellline: exp.tumor_cellline,
-        isotope: iso,
-        half_life_s: hl,
-        out_unit: outUnit,
-        injection_count: "",
-        avg_inj_time: "",
-        tp_30min: "",
-        tp_60min: "",
-        tp_120min: "",
-        net_sum_out: `At=${document.getElementById("dec_at").textContent}`,
-        injections_json: JSON.stringify({
-          type: "decay",
-          A0: `${document.getElementById("dec_a0").value} ${document.getElementById("dec_a0_unit").value}`,
-          t0: document.getElementById("dec_t0").value,
-          t1: document.getElementById("dec_t1").value,
-          dt_s: document.getElementById("dec_dt").textContent,
-          At_out: document.getElementById("dec_at").textContent,
-          At_Bq: document.getElementById("dec_bq").textContent,
-          cal: document.getElementById("dec_cal").value,
-          Bq_div_cal: document.getElementById("dec_bq_div").textContent
-        }),
-        note
-      };
+    /* ========= bindings ========= */
+    function bindIsotopeSelects() {
+      const inj = document.getElementById("inj_iso");
+      const dec = document.getElementById("dec_iso");
+      if (inj) inj.addEventListener("change", () => { syncHL("inj"); calcAll(); });
+      if (dec) dec.addEventListener("change", () => { syncHL("dec"); calcAll(); });
+    }
 
-      addLogRow(row);
-      document.querySelector('.tab[data-tab="log"]').click();
-      renderLogOverview();
-    });
+    function bindNControls() {
+      document.getElementById("inj_count")?.addEventListener("change", (e) => setInjectionCount(Number(e.target.value)));
+      document.getElementById("inj_add")?.addEventListener("click", () => {
+        const n = getN();
+        setInjectionCount(Math.min(MAX_N, n + 1));
+      });
+      document.getElementById("inj_remove")?.addEventListener("click", () => {
+        const n = getN();
+        setInjectionCount(Math.max(MIN_N, n - 1));
+      });
+    }
 
-    /* ========= top controls for N ========= */
-    document.getElementById("inj_count").addEventListener("change", (e) => {
-      setInjectionCount(Number(e.target.value));
-    });
-    document.getElementById("inj_add").addEventListener("click", () => {
-      const n = getN();
-      setInjectionCount(Math.min(MAX_N, n + 1));
-    });
-    document.getElementById("inj_remove").addEventListener("click", () => {
-      const n = getN();
-      setInjectionCount(Math.max(MIN_N, n - 1));
-    });
-
-    /* ========= global bindings ========= */
-    function bindGlobal() {
+    function bindGenericRecalc() {
       const skipIds = ["inj_iso", "dec_iso", "iso_json"];
-
       document.querySelectorAll("#inj input, #inj select, #decay input, #decay select").forEach(el => {
         if (skipIds.includes(el.id)) return;
         el.addEventListener("input", calcAll);
         el.addEventListener("change", calcAll);
       });
-
-      const isoIds = ["inj_iso", "dec_iso"];
-      isoIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("change", () => {
-          syncHL(id === "inj_iso" ? "inj" : "dec");
-          calcAll();
-        });
-      });
     }
 
     /* ========= init ========= */
     function init() {
-      fillNOptions();
+      try {
+        bindTabs();
 
-      initIsoJSON();
-      setIsotopes(DEFAULT_ISOTOPES);
+        fillNOptions();
+        initIsoJSON();
+        setIsotopes(DEFAULT_ISOTOPES);
 
-      initExperimentInfo();
-      readExperimentInfo();
+        initExperimentInfo();
+        bindExperimentInfo();
+        readExperimentInfo();
 
-      setInjectionCount(getSavedN());
+        // 先渲染注射区（否则 calcAll 会找不到注射输入）
+        setInjectionCount(getSavedN());
 
-      bindGlobal();
+        // 绑定监听器（如果这里之前被错误中断，按钮就会完全失效）
+        bindIsoJSONButtons();
+        bindIsotopeSelects();
+        bindNControls();
+        bindGenericRecalc();
+        bindExportAndClear();
+        bindSaveButtons();
 
-      calcAll();
-      updateHeaderCount();
-      renderLogOverview();
+        // 所有东西就绪后再算一次
+        calcAll();
+        updateHeaderCount();
+        renderLogOverview();
+      } catch (e) {
+        showFatal("初始化失败（请看控制台错误）", e);
+        throw e;
+      }
     }
 
-    init();
+    // 再保险：等待 DOM 完整后初始化（即便你把脚本挪位置也不容易坏）
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
   </script>
 
 </body>
