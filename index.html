@@ -23,11 +23,28 @@
       --radius: 14px;
     }
 
+    /* ===== Wallpaper layer ===== */
+    .wallpaper {
+      position: fixed;
+      inset: 0;
+      z-index: -10;
+      pointer-events: none;
+      background: var(--wp-bg, #f7f7f8);
+      background-image: var(--wp-img, none);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: var(--wp-attach, scroll);
+      opacity: var(--wp-opacity, 1);
+      filter: blur(var(--wp-blur, 0px));
+      transform: scale(1.02);
+    }
+
     body {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
         "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
+      background: transparent;
       color: var(--text);
     }
 
@@ -432,6 +449,8 @@
 </head>
 
 <body>
+  <div class="wallpaper" id="wallpaper"></div>
+
   <div class="header">
     <div class="header-inner">
       <div class="header-left">
@@ -440,17 +459,80 @@
       </div>
       <div class="header-right">
         <span class="header-note" id="header_log_hint">当前记录数：0</span>
+        <button class="btn-ghost" id="header_wallpaper">壁纸</button>
         <button class="btn-ghost" id="header_export_csv">导出 CSV</button>
       </div>
     </div>
   </div>
 
   <div class="wrap">
+    <!-- Wallpaper panel -->
+    <div class="card" id="wp_panel" style="display:none; margin-bottom:14px;">
+      <div class="row">
+        <span class="pill">壁纸设置</span>
+        <span class="smallnote">设置会自动保存到浏览器本地（localStorage）。图片过大可能超过浏览器存储限制。</span>
+      </div>
+      <div class="hr"></div>
+
+      <div class="grid">
+        <div class="field w4">
+          <label>模式</label>
+          <select id="wp_mode">
+            <option value="solid">纯色</option>
+            <option value="gradient">渐变</option>
+            <option value="image">图片</option>
+          </select>
+        </div>
+
+        <div class="field w4">
+          <label>纯色 / 渐变色 1</label>
+          <input id="wp_color1" type="color" value="#f7f7f8">
+        </div>
+
+        <div class="field w4">
+          <label>渐变色 2（仅渐变模式）</label>
+          <input id="wp_color2" type="color" value="#ffffff">
+        </div>
+
+        <div class="field w6">
+          <label>上传图片（仅图片模式）</label>
+          <input id="wp_file" type="file" accept="image/*">
+        </div>
+
+        <div class="field w6">
+          <label>背景固定（滚动时不动）</label>
+          <select id="wp_fixed">
+            <option value="scroll">否</option>
+            <option value="fixed">是</option>
+          </select>
+        </div>
+
+        <div class="field w6">
+          <label>不透明度（0.20 ~ 1.00）</label>
+          <input id="wp_opacity" type="number" min="0.2" max="1" step="0.05" value="1">
+        </div>
+
+        <div class="field w6">
+          <label>模糊（px，0~20）</label>
+          <input id="wp_blur" type="number" min="0" max="20" step="1" value="0">
+        </div>
+
+        <div class="field w12">
+          <div class="row">
+            <button class="primary" id="wp_apply" type="button">应用</button>
+            <button id="wp_reset" type="button">恢复默认</button>
+            <span id="wp_status" class="status mono">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <h1>注射净活度计算（N 次注射：分针/空针 = 剂量 − 背景）</h1>
     <div class="hint">
       每次注射：Split@Inj = (分针剂量−分针背景) 校正到注射时刻；Empty@Inj = (空针剂量−空针背景) 从注射后测量回推到注射时刻；Net = Split@Inj − Empty@Inj。支持任意 N 次注射并合计。
     </div>
 
+    <!-- 试验信息记录 -->
     <div class="card" style="margin-bottom:14px;">
       <div class="row">
         <span class="pill">试验信息（将写入记录与 CSV）</span>
@@ -472,6 +554,7 @@
           <input id="exp_cellline" placeholder="例如：4T1 / CT26 / BxPC-3 ..." />
         </div>
 
+        <!-- 时间点计划 -->
         <div class="field w12">
           <div class="hr"></div>
           <div class="row" style="margin-bottom:6px;">
@@ -500,7 +583,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -511,6 +593,7 @@
       <div class="tab" data-tab="log">计算记录（CSV 导出）</div>
     </div>
 
+    <!-- 注射净活度 -->
     <div id="inj" class="card">
       <div class="row">
         <span class="pill">单位自动换算：Bq / MBq / µCi / mCi</span>
@@ -574,6 +657,7 @@
       </div>
     </div>
 
+    <!-- 衰变计算 -->
     <div id="decay" class="card" style="display:none;">
       <div class="row"><span class="pill">At = A0 · exp(-ln2 · Δt / T1/2)</span></div>
       <div class="hr"></div>
@@ -626,6 +710,7 @@
       </div>
     </div>
 
+    <!-- 核素表 JSON -->
     <div id="iso" class="card" style="display:none;">
       <div class="row">
         <span class="pill">核素表 JSON（可编辑）</span>
@@ -648,6 +733,7 @@
       </div>
     </div>
 
+    <!-- 记录与导出 -->
     <div id="log" class="card" style="display:none;">
       <div class="row"><span class="pill">计算记录</span><span class="pill">结构化 CSV（按列导出）</span></div>
       <div class="hr"></div>
@@ -686,10 +772,9 @@
 
   <script>
     /***********************
-     * v5 最终修复版要点：
-     * 1) 全局错误捕获：任何 JS 报错都会显示在“状态”里，避免“按钮/下拉全失效但看不见原因”
-     * 2) setIsotopes() 不再在初始化早期调用 calcAll()，避免函数缺失/DOM未就绪导致脚本中断
-     * 3) syncHL() 容错匹配 value/name（trim + 大小写）
+     * v6 最终整合版（含壁纸）
+     * - 修复核素切换半衰期不更新、N 按钮不响应（脚本中断导致监听器未绑定）
+     * - 增加壁纸：纯色/渐变/图片，透明度/模糊/固定背景，localStorage 保存
      ***********************/
 
     /* ========= global fatal helper ========= */
@@ -702,20 +787,16 @@
         if (dec) { dec.textContent = msg; dec.className = "status mono bad"; }
         const plan = document.getElementById("plan_status");
         if (plan) { plan.textContent = msg; plan.className = "status mono bad"; }
+        const wp = document.getElementById("wp_status");
+        if (wp) { wp.textContent = msg; wp.className = "status mono bad"; }
       } catch { }
     }
-    window.addEventListener("error", (e) => {
-      showFatal(`JS 运行错误：${e?.message || "unknown"}`, e?.error);
-    });
-    window.addEventListener("unhandledrejection", (e) => {
-      showFatal(`JS Promise 错误：${e?.reason?.message || String(e?.reason || "unknown")}`, e?.reason);
-    });
+    window.addEventListener("error", (e) => showFatal(`JS 运行错误：${e?.message || "unknown"}`, e?.error));
+    window.addEventListener("unhandledrejection", (e) => showFatal(`JS Promise 错误：${e?.reason?.message || String(e?.reason || "unknown")}`, e?.reason));
 
     /* ========= isotope label helpers ========= */
     const SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
-    function toSuperscriptDigits(numStr) {
-      return String(numStr).split("").map(ch => SUP[ch] ?? ch).join("");
-    }
+    function toSuperscriptDigits(numStr) { return String(numStr).split("").map(ch => SUP[ch] ?? ch).join(""); }
     function makeStandardIsotopeLabel(name) {
       const s = String(name).trim();
       const m = s.match(/^([A-Za-z]+)(\d+)(m)?$/);
@@ -744,7 +825,6 @@
 
     const ln2 = Math.log(2);
     const UNIT_TO_BQ = { "Bq": 1, "MBq": 1e6, "uCi": 3.7e4, "mCi": 3.7e7 };
-
     function toBq(value, unit) {
       const v = Number(value);
       return (isFinite(v) && (unit in UNIT_TO_BQ)) ? v * UNIT_TO_BQ[unit] : NaN;
@@ -761,7 +841,6 @@
       const pad = (n) => String(n).padStart(2, "0");
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
-
     function fmtDateTimeLocal(d) {
       if (!d) return "";
       const pad = (n) => String(n).padStart(2, "0");
@@ -772,26 +851,18 @@
     const LOG_KEY = "radio_calc_logs_v4_N";
     const EXP_KEY = "radio_calc_current_experiment_v1";
     const N_KEY = "radio_calc_injection_count_v1";
+    const WP_KEY = "radio_calc_wallpaper_v1";
 
     function loadLog() { try { return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); } catch { return []; } }
     function saveLog(list) { localStorage.setItem(LOG_KEY, JSON.stringify(list)); }
-    function addLogRow(row) {
-      const logs = loadLog();
-      logs.unshift(row);
-      saveLog(logs);
-      updateHeaderCount();
-    }
-    function loadExperiment() {
-      try { const raw = localStorage.getItem(EXP_KEY); return raw ? JSON.parse(raw) : null; }
-      catch { return null; }
-    }
+    function addLogRow(row) { const logs = loadLog(); logs.unshift(row); saveLog(logs); updateHeaderCount(); }
+    function loadExperiment() { try { const raw = localStorage.getItem(EXP_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }
     function saveExperiment(obj) { localStorage.setItem(EXP_KEY, JSON.stringify(obj)); }
 
     function updateHeaderCount() {
       const el = document.getElementById("header_log_hint");
       if (el) el.textContent = `当前记录数：${loadLog().length}`;
     }
-
     function escapeCSV(s) {
       const str = String(s ?? "");
       if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
@@ -816,7 +887,6 @@
 
     /* ========= isotopes grouped ========= */
     let isotopes = [];
-
     function normalizeCategory(cat) {
       const s = String(cat || "").trim().toUpperCase();
       if (s === "PET") return "PET";
@@ -825,33 +895,23 @@
       if (s === "OTHER") return "Other";
       return "Other";
     }
-
     function groupedOptHTML(list) {
       const order = ["PET", "SPECT", "Therapy", "Other"];
       const groupMap = new Map();
       order.forEach(k => groupMap.set(k, []));
-      list.forEach(x => {
-        const cat = normalizeCategory(x.category);
-        groupMap.get(cat).push(x);
-      });
-
-      function optLabel(x) {
-        const label = x.label ? String(x.label) : makeStandardIsotopeLabel(x.name);
-        return label;
-      }
+      list.forEach(x => groupMap.get(normalizeCategory(x.category)).push(x));
 
       const out = [];
       for (const cat of order) {
         const arr = groupMap.get(cat) || [];
         if (!arr.length) continue;
         out.push(`<optgroup label="${cat}">`);
-        arr.forEach(x => out.push(`<option value="${String(x.name).trim()}">${optLabel(x)}</option>`));
+        arr.forEach(x => out.push(`<option value="${String(x.name).trim()}">${x.label ? String(x.label) : makeStandardIsotopeLabel(x.name)}</option>`));
         out.push(`</optgroup>`);
       }
       return out.join("");
     }
 
-    /* ======= 关键修复：这里不再触发 calcAll() ======= */
     function setIsotopes(list) {
       isotopes = list.slice();
       const html = groupedOptHTML(isotopes);
@@ -866,10 +926,8 @@
       if (isotopes.length) {
         const injV = String(injSel.value ?? "").trim();
         const decV = String(decSel.value ?? "").trim();
-
         const injOk = isotopes.some(x => String(x.name).trim() === injV);
         const decOk = isotopes.some(x => String(x.name).trim() === decV);
-
         if (!injOk) injSel.value = String(isotopes[0].name).trim();
         if (!decOk) decSel.value = String(isotopes[0].name).trim();
       }
@@ -918,9 +976,7 @@
             return { name, half_life_s: hl, category, label };
           });
           setIsotopes(cleaned);
-
           if (status) { status.textContent = "OK：已应用核素表（含类别分组）。"; status.className = "status mono good"; }
-          // 核素表更新后，再统一 calcAll（此时页面结构已完整）
           calcAll();
         } catch (e) {
           if (status) { status.textContent = "错误：" + (e?.message ?? String(e)); status.className = "status mono bad"; }
@@ -941,7 +997,6 @@
       const exp_probe = document.getElementById("exp_probe");
       const exp_date = document.getElementById("exp_date");
       const exp_cellline = document.getElementById("exp_cellline");
-
       if (!exp_probe || !exp_date || !exp_cellline) return;
 
       if (saved) {
@@ -1081,7 +1136,6 @@
       const blocks = [];
       for (let i = 1; i <= n; i++) blocks.push(injBlockHTML(i));
       container.innerHTML = blocks.join("");
-
       container.querySelectorAll("input, select").forEach(el => {
         el.addEventListener("input", calcAll);
         el.addEventListener("change", calcAll);
@@ -1121,7 +1175,6 @@
 
       const sumMs = injTimes.reduce((acc, d) => acc + d.getTime(), 0);
       const avgMs = Math.round(sumMs / n);
-
       const avg = new Date(avgMs);
       const t30 = new Date(avgMs + 30 * 60 * 1000);
       const t60 = new Date(avgMs + 60 * 60 * 1000);
@@ -1143,12 +1196,10 @@
       const tBefore = parseDTLocal(getInput("t_before").value);
       const tInj = parseDTLocal(getInput("t_inj").value);
       const tAfter = parseDTLocal(getInput("t_after").value);
-
       const sDose = Number(getInput("s_dose").value);
       const sBg = Number(getInput("s_bg").value);
       const eDose = Number(getInput("e_dose").value);
       const eBg = Number(getInput("e_bg").value);
-
       const unit = getInput("unit").value;
       return { index: i, tBefore, tInj, tAfter, sDose, sBg, eDose, eBg, unit };
     }
@@ -1161,7 +1212,6 @@
     function calcOneInjection(i) {
       const hl = Number(document.getElementById("inj_hl").value);
       const outUnit = document.getElementById("inj_out_unit").value;
-
       const data = readInjection(i);
       const { tBefore, tInj, tAfter, sDose, sBg, eDose, eBg, unit } = data;
 
@@ -1216,7 +1266,6 @@
       const results = [];
       const errors = [];
       const warns = [];
-
       for (let i = 1; i <= n; i++) {
         const r = calcOneInjection(i);
         results.push(r);
@@ -1480,22 +1529,14 @@
 
     /* ========= bindings ========= */
     function bindIsotopeSelects() {
-      const inj = document.getElementById("inj_iso");
-      const dec = document.getElementById("dec_iso");
-      if (inj) inj.addEventListener("change", () => { syncHL("inj"); calcAll(); });
-      if (dec) dec.addEventListener("change", () => { syncHL("dec"); calcAll(); });
+      document.getElementById("inj_iso")?.addEventListener("change", () => { syncHL("inj"); calcAll(); });
+      document.getElementById("dec_iso")?.addEventListener("change", () => { syncHL("dec"); calcAll(); });
     }
 
     function bindNControls() {
       document.getElementById("inj_count")?.addEventListener("change", (e) => setInjectionCount(Number(e.target.value)));
-      document.getElementById("inj_add")?.addEventListener("click", () => {
-        const n = getN();
-        setInjectionCount(Math.min(MAX_N, n + 1));
-      });
-      document.getElementById("inj_remove")?.addEventListener("click", () => {
-        const n = getN();
-        setInjectionCount(Math.max(MIN_N, n - 1));
-      });
+      document.getElementById("inj_add")?.addEventListener("click", () => setInjectionCount(Math.min(MAX_N, getN() + 1)));
+      document.getElementById("inj_remove")?.addEventListener("click", () => setInjectionCount(Math.max(MIN_N, getN() - 1)));
     }
 
     function bindGenericRecalc() {
@@ -1507,31 +1548,170 @@
       });
     }
 
+    /* ========= wallpaper ========= */
+    function defaultWallpaper() {
+      return {
+        mode: "solid",
+        color1: "#f7f7f8",
+        color2: "#ffffff",
+        opacity: 1,
+        blur: 0,
+        attach: "scroll",
+        imageDataUrl: ""
+      };
+    }
+
+    function loadWallpaper() {
+      try {
+        const raw = localStorage.getItem(WP_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveWallpaper(cfg) {
+      localStorage.setItem(WP_KEY, JSON.stringify(cfg));
+    }
+
+    function applyWallpaper(cfg) {
+      const root = document.documentElement;
+      const mode = cfg.mode || "solid";
+      root.style.setProperty("--wp-attach", cfg.attach || "scroll");
+      root.style.setProperty("--wp-opacity", String(cfg.opacity ?? 1));
+      root.style.setProperty("--wp-blur", `${Number(cfg.blur || 0)}px`);
+
+      if (mode === "solid") {
+        root.style.setProperty("--wp-bg", cfg.color1 || "#f7f7f8");
+        root.style.setProperty("--wp-img", "none");
+      } else if (mode === "gradient") {
+        const c1 = cfg.color1 || "#f7f7f8";
+        const c2 = cfg.color2 || "#ffffff";
+        root.style.setProperty("--wp-bg", `linear-gradient(135deg, ${c1}, ${c2})`);
+        root.style.setProperty("--wp-img", "none");
+      } else if (mode === "image") {
+        root.style.setProperty("--wp-bg", "#f7f7f8");
+        root.style.setProperty("--wp-img", cfg.imageDataUrl ? `url("${cfg.imageDataUrl}")` : "none");
+      } else {
+        root.style.setProperty("--wp-bg", "#f7f7f8");
+        root.style.setProperty("--wp-img", "none");
+      }
+    }
+
+    function initWallpaperUI() {
+      const panel = document.getElementById("wp_panel");
+      const btn = document.getElementById("header_wallpaper");
+      const status = document.getElementById("wp_status");
+
+      if (btn && panel) {
+        btn.addEventListener("click", () => {
+          panel.style.display = (panel.style.display === "none" ? "" : "none");
+        });
+      }
+
+      const cfg = loadWallpaper() || defaultWallpaper();
+
+      document.getElementById("wp_mode").value = cfg.mode;
+      document.getElementById("wp_color1").value = cfg.color1 || "#f7f7f8";
+      document.getElementById("wp_color2").value = cfg.color2 || "#ffffff";
+      document.getElementById("wp_opacity").value = String(cfg.opacity ?? 1);
+      document.getElementById("wp_blur").value = String(cfg.blur ?? 0);
+      document.getElementById("wp_fixed").value = cfg.attach || "scroll";
+
+      applyWallpaper(cfg);
+      if (status) { status.textContent = "OK：已加载壁纸设置。"; status.className = "status mono good"; }
+
+      let lastImageDataUrl = cfg.imageDataUrl || "";
+
+      document.getElementById("wp_file").addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          lastImageDataUrl = String(reader.result || "");
+          if (status) { status.textContent = "OK：图片已读取，点击“应用”生效。"; status.className = "status mono good"; }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById("wp_apply").addEventListener("click", () => {
+        try {
+          const mode = document.getElementById("wp_mode").value;
+          const c1 = document.getElementById("wp_color1").value;
+          const c2 = document.getElementById("wp_color2").value;
+          const opacity = Number(document.getElementById("wp_opacity").value);
+          const blur = Number(document.getElementById("wp_blur").value);
+          const attach = document.getElementById("wp_fixed").value;
+
+          const cfg2 = {
+            mode,
+            color1: c1,
+            color2: c2,
+            opacity: isFinite(opacity) ? Math.max(0.2, Math.min(1, opacity)) : 1,
+            blur: isFinite(blur) ? Math.max(0, Math.min(20, blur)) : 0,
+            attach,
+            imageDataUrl: (mode === "image") ? (lastImageDataUrl || "") : ""
+          };
+
+          saveWallpaper(cfg2);
+          applyWallpaper(cfg2);
+          if (status) { status.textContent = "OK：已应用并保存。"; status.className = "status mono good"; }
+        } catch (err) {
+          if (status) { status.textContent = "错误：" + (err?.message || String(err)); status.className = "status mono bad"; }
+        }
+      });
+
+      document.getElementById("wp_reset").addEventListener("click", () => {
+        const cfg0 = defaultWallpaper();
+        saveWallpaper(cfg0);
+
+        document.getElementById("wp_mode").value = cfg0.mode;
+        document.getElementById("wp_color1").value = cfg0.color1;
+        document.getElementById("wp_color2").value = cfg0.color2;
+        document.getElementById("wp_opacity").value = String(cfg0.opacity);
+        document.getElementById("wp_blur").value = String(cfg0.blur);
+        document.getElementById("wp_fixed").value = cfg0.attach;
+        document.getElementById("wp_file").value = "";
+        lastImageDataUrl = "";
+
+        applyWallpaper(cfg0);
+        if (status) { status.textContent = "已恢复默认壁纸。"; status.className = "status mono good"; }
+      });
+    }
+
     /* ========= init ========= */
+    function bindExportAndClearSafe() { try { bindExportAndClear(); } catch (e) { showFatal("导出/清空绑定失败", e); } }
+
     function init() {
       try {
         bindTabs();
 
+        // wallpaper
+        initWallpaperUI();
+
+        // N options + isotopes
         fillNOptions();
         initIsoJSON();
         setIsotopes(DEFAULT_ISOTOPES);
 
+        // experiment defaults
         initExperimentInfo();
         bindExperimentInfo();
         readExperimentInfo();
 
-        // 先渲染注射区（否则 calcAll 会找不到注射输入）
+        // render injections first
         setInjectionCount(getSavedN());
 
-        // 绑定监听器（如果这里之前被错误中断，按钮就会完全失效）
+        // bindings
         bindIsoJSONButtons();
         bindIsotopeSelects();
         bindNControls();
         bindGenericRecalc();
-        bindExportAndClear();
+        bindExportAndClearSafe();
         bindSaveButtons();
 
-        // 所有东西就绪后再算一次
+        // initial calc + render log
         calcAll();
         updateHeaderCount();
         renderLogOverview();
@@ -1541,7 +1721,7 @@
       }
     }
 
-    // 再保险：等待 DOM 完整后初始化（即便你把脚本挪位置也不容易坏）
+    // DOM ready safe init
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", init);
     } else {
