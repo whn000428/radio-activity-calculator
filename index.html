@@ -764,6 +764,12 @@
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
+    function fmtDateTimeLocal(d) {
+      if (!d) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
     /* ========= storage ========= */
     const LOG_KEY = "radio_calc_logs_v4_N";
     const EXP_KEY = "radio_calc_current_experiment_v1";
@@ -836,30 +842,66 @@
         if (!arr.length) continue;
         out.push(`<optgroup label="${cat}">`);
         arr.forEach(x => {
-          out.push(`<option value="${x.name}">${optLabel(x)}</option>`);
+          out.push(`<option value="${String(x.name).trim()}">${optLabel(x)}</option>`);
         });
         out.push(`</optgroup>`);
       }
       return out.join("");
     }
 
+    /* =========================
+       FIX 1: setIsotopes 更稳健
+       - 渲染 options 后，确保 select 当前 value 一定能在 isotopes.name 中命中
+       - 命中失败就强制选择第一个核素
+       ========================= */
     function setIsotopes(list) {
       isotopes = list.slice();
       const html = groupedOptHTML(isotopes);
-      document.getElementById("inj_iso").innerHTML = html;
-      document.getElementById("dec_iso").innerHTML = html;
-      if (!document.getElementById("inj_iso").value && isotopes.length) document.getElementById("inj_iso").value = isotopes[0].name;
-      if (!document.getElementById("dec_iso").value && isotopes.length) document.getElementById("dec_iso").value = isotopes[0].name;
+
+      const injSel = document.getElementById("inj_iso");
+      const decSel = document.getElementById("dec_iso");
+
+      injSel.innerHTML = html;
+      decSel.innerHTML = html;
+
+      if (isotopes.length) {
+        const injV = String(injSel.value ?? "").trim();
+        const decV = String(decSel.value ?? "").trim();
+
+        const injOk = isotopes.some(x => String(x.name).trim() === injV);
+        const decOk = isotopes.some(x => String(x.name).trim() === decV);
+
+        if (!injOk) injSel.value = String(isotopes[0].name).trim();
+        if (!decOk) decSel.value = String(isotopes[0].name).trim();
+      }
+
       syncHL("inj");
       syncHL("dec");
       calcAll();
     }
 
+    /* =========================
+       FIX 2: syncHL 加容错
+       - 先严格匹配，再做大小写/空格宽松匹配
+       - 找不到就 console.warn，便于你定位是否 name/value 不一致
+       ========================= */
     function syncHL(which) {
       const sel = (which === "inj") ? document.getElementById("inj_iso") : document.getElementById("dec_iso");
       const hl = (which === "inj") ? document.getElementById("inj_hl") : document.getElementById("dec_hl");
-      const found = isotopes.find(x => x.name === sel.value);
-      if (found) hl.value = found.half_life_s;
+
+      const v = String(sel.value ?? "").trim();
+      let found = isotopes.find(x => String(x.name).trim() === v);
+
+      if (!found) {
+        const v2 = v.toUpperCase();
+        found = isotopes.find(x => String(x.name).trim().toUpperCase() === v2);
+      }
+
+      if (found) {
+        hl.value = found.half_life_s;
+      } else {
+        console.warn(`[syncHL] cannot find isotope for value="${sel.value}"`);
+      }
     }
 
     function initIsoJSON() {
@@ -953,6 +995,12 @@
       }
       sel.innerHTML = opts.join("");
       sel.value = String(getSavedN());
+    }
+
+    function getN() {
+      const v = Number(document.getElementById("inj_count").value);
+      if (isFinite(v) && v >= MIN_N && v <= MAX_N) return v;
+      return getSavedN();
     }
 
     function getCurrentDateTimeStr() {
@@ -1055,8 +1103,6 @@
       calcAll();
     }
 
-    /* ========= set default times (Removed) ========= */
-    // function setDefaultTimes() { ... }
     function computeAvgInjectionPlan() {
       const s = document.getElementById("plan_status");
       s.className = "status mono";
@@ -1295,7 +1341,6 @@
         return;
       }
 
-      // N 次注射：用 injections_json 存所有明细（方便你后处理）
       const cols = [
         "saved_at",
         "probe_name", "exp_date", "tumor_cellline",
@@ -1354,7 +1399,6 @@
       const t60Str = plan ? fmtDateTimeLocal(plan.t60) : "";
       const t120Str = plan ? fmtDateTimeLocal(plan.t120) : "";
 
-      // 构建 injections_json：保存每次注射的全部输入 + 关键计算结果（便于后处理）
       const injections = results.map(r => {
         const raw = r.raw;
         const d = r.derived;
@@ -1456,8 +1500,6 @@
 
     /* ========= global bindings ========= */
     function bindGlobal() {
-      // 1. Generic binding for most inputs: recalculate on input/change
-      // Exclude iso selectors to avoid race condition (we want syncHL -> calcAll)
       const skipIds = ["inj_iso", "dec_iso", "iso_json"];
 
       document.querySelectorAll("#inj input, #inj select, #decay input, #decay select").forEach(el => {
@@ -1466,7 +1508,6 @@
         el.addEventListener("change", calcAll);
       });
 
-      // 2. Special handling for isotopes
       const isoIds = ["inj_iso", "dec_iso"];
       isoIds.forEach(id => {
         const el = document.getElementById(id);
@@ -1480,24 +1521,18 @@
 
     /* ========= init ========= */
     function init() {
-      // N options
       fillNOptions();
 
-      // isotopes
       initIsoJSON();
       setIsotopes(DEFAULT_ISOTOPES);
 
-      // experiment defaults
       initExperimentInfo();
       readExperimentInfo();
 
-      // render injections
       setInjectionCount(getSavedN());
 
-      // bind
       bindGlobal();
 
-      // initial calc
       calcAll();
       updateHeaderCount();
       renderLogOverview();
