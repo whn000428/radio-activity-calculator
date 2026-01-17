@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ChengLab · Wu</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --text:#111;
+      --muted:#666;
+      --border:#e5e5e5;
+    }
+    *{ box-sizing:border-box; }
+    
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow-x:hidden;
+      height: 100vh; /* 强制占满全屏高度 */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top bar - 简化，贴边 */
+    .topbar{
+      position:fixed;
+      top:0; left:0; right:0;
+      height:80px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      padding: 0 40px;
+      z-index:50;
+    }
+    .brand{
+      font-weight:600;
+      font-size:16px;
+      letter-spacing:-0.01em;
+    }
+
+    .btn{
+      border:1px solid #111;
+      background:transparent;
+      padding:10px 20px;
+      cursor:pointer;
+      font-size:14px;
+      font-weight: 500;
+      border-radius: 50px; /* 圆角设计更现代 */
+      transition: all 0.2s ease;
+    }
+    .btn:hover{ background:#111; color:#fff; }
+
+    /* Main Layout - 核心改动 */
+    .page{
+      flex: 1; /* 撑开剩余空间 */
+      display:flex;
+      flex-direction:column;
+      justify-content: center; /* 垂直居中主要内容 */
+      position: relative;
+      padding-top: 80px; /* 避开导航栏 */
+      padding-bottom: 20px;
+    }
+
+    .hero-container{
+      width: 100%;
+      max-width: 1600px; /* 限制最大宽度，但比之前宽得多 */
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+
+    /* Typography - 巨大化处理 */
+    .headline{
+      font-weight:800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      text-align:center;
+      color:#000;
+      /* 响应式字体：根据视口宽度自动调整，保证撑满 */
+      font-size: clamp(60px, 11vw, 160px); 
+      z-index: 10;
+      position: relative;
+    }
+    
+    /* 上半部分文字 */
+    .h-top {
+      margin-bottom: -3vh; /*稍微压住图片 */
+    }
+    /* 下半部分文字 */
+    .h-bottom {
+      margin-top: -3vh; /*稍微压住图片 */
+    }
+
+    /* Visual Center - 放大图片区域 */
+    .visual-wrap{
+      position:relative;
+      height: clamp(280px, 35vh, 500px); /* 高度随视口变化 */
+      width: 100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index: 1;
+    }
+    
+    .photo{
+      width: clamp(220px, 25vw, 340px);
+      height: clamp(280px, 32vw, 440px);
+      background: #1a1a1a;
+      border-radius: 6px;
+      transform: rotate(-6deg);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+      z-index:2;
+      background: linear-gradient(135deg, #333 0%, #000 100%);
+    }
+    
+    .card-bg{
+      position:absolute;
+      width: clamp(200px, 23vw, 320px);
+      height: clamp(260px, 30vw, 420px);
+      border-radius:6px;
+      opacity: 0.9;
+    }
+    .bg-left{
+      background:#c7d2fe; /* 稍微深一点的蓝紫 */
+      transform:translate(-40px, 15px) rotate(-10deg);
+      z-index:1;
+    }
+    .bg-right{
+      background:#fecaca; /* 稍微深一点的红粉 */
+      transform:translate(40px, 15px) rotate(-2deg);
+      z-index:0;
+    }
+
+    /* Footer - 贴边布局 */
+    .footer-bar{
+      width: 100%;
+      padding: 20px 40px 40px 40px; /* 左右留出空间 */
+      display:flex;
+      justify-content: space-between; /*两端对齐 */
+      align-items: flex-end; /* 底部对齐 */
+    }
+
+    /* Left: Visitor */
+    .visitor-box{
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .v-row span:first-child{
+      display: inline-block;
+      width: 60px;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      opacity: 0.6;
+    }
+    .v-row span:last-child{
+      font-family: ui-monospace, monospace;
+      color: var(--text);
+    }
+
+    /* Right: Info */
+    .info-box{
+      text-align: right;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .info-title{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .tool-link{
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px solid currentColor;
+      font-weight: 500;
+    }
+    .tool-link:hover{ opacity: 0.6; }
+    
+    .dev-tag{
+      font-size: 10px;
+      padding: 2px 6px;
+      background: #eee;
+      border-radius: 4px;
+      vertical-align: middle;
+      color: #666;
+      margin-right: 4px;
+    }
+
+    /* Mobile adaptation */
+    @media (max-width: 768px){
+      .topbar, .footer-bar{ padding: 20px; }
+      .footer-bar{ flex-direction: column; gap: 30px; align-items: flex-start; }
+      .info-box{ text-align: left; }
+      .headline{ font-size: 56px; }
+      .h-top{ margin-bottom: 0; }
+      .h-bottom{ margin-top: 0; }
+    }
+  </style>
+</head>
+
+<body>
+  
+  <header class="topbar">
+    <div class="brand">ChengLab · Wu</div>
+    <button class="btn" onclick="location.href='./features/inject.html'">Launch App</button>
+  </header>
+
+  <main class="page">
+    <div class="hero-container">
+      
+      <h1 class="headline h-top">ChengLab</h1>
+
+      <div class="visual-wrap">
+        <div class="card-bg bg-right"></div>
+        <div class="card-bg bg-left"></div>
+        <div class="photo"></div>
+      </div>
+
+      <h2 class="headline h-bottom">Designed by Wu</h2>
+
+    </div>
+
+    <div class="footer-bar">
+      
+      <div class="visitor-box">
+        <div class="v-row">
+          <span>Visitor</span><span id="v_name">Guest</span>
+        </div>
+        <div class="v-row">
+          <span>Session</span><span id="v_session">—</span>
+        </div>
+        <div class="v-row">
+          <span>Time</span><span id="v_time">—</span>
+        </div>
+        <div class="v-row">
+          <span>Count</span><span id="v_visits">—</span>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <div style="margin-bottom: 20px;">
+          <div class="info-title">Affiliation</div>
+          Shanghai Institute of Materia Medica<br>
+          Chinese Academy of Sciences
+        </div>
+
+        <div>
+          <div class="info-title">Tools Status</div>
+          <div><a href="./features/inject.html" class="tool-link">Injection Calculator</a></div>
+          <div style="color:#999; margin-top:4px;"><span class="dev-tag">DEV</span> Nuclide Library</div>
+          <div style="color:#999;"><span class="dev-tag">DEV</span> Decay Calculator</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+<script>
+  (function(){
+    const key = "chenglab_wu_portal_visits";
+    const visits = (parseInt(localStorage.getItem(key) || "0", 10) + 1);
+    localStorage.setItem(key, String(visits));
+
+    const pad = n => String(n).padStart(2, "0");
+    const now = new Date();
+    const timeStr = `${now.getHours()}:${pad(now.getMinutes())}`;
+
+    const sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID().slice(0,6) : Math.random().toString(16).slice(2,8);
+
+    document.getElementById("v_session").textContent = sessionId;
+    document.getElementById("v_time").textContent = timeStr;
+    document.getElementById("v_visits").textContent = visits;
+  })();
+</script>
+
+</body>
+</html>
