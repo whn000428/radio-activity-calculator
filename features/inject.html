@@ -1,0 +1,1836 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>注射净活度计算（N 次注射：分针/空针 = 读数 − 本底）</title>
+
+  
+  <style>
+    :root{
+      --bg:#ffffff;
+      --text:#111;
+      --muted:#666;
+      --border:#e5e5e5;
+      --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 12px 40px rgba(0,0,0,0.08);
+      --shadow2: 0 1px 2px rgba(0,0,0,0.05);
+      --radius: 16px;
+      --good:#16a34a;
+      --bad:#dc2626;
+      --chip:#f3f4f6;
+      --chip2:#eef2ff;
+      --chip3:#fee2e2;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+        "PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei", sans-serif;
+      overflow-x:hidden;
+    }
+
+    /* --- topbar (align with portal) --- */
+    .topbar{
+      position: fixed;
+      top:0; left:0; right:0;
+      height:80px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      padding: 0 40px;
+      z-index: 50;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand{
+      font-weight:600;
+      font-size:16px;
+      letter-spacing:-0.01em;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .brand small{
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      max-width: 52vw;
+    }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-shrink:0;
+    }
+
+    .btn{
+      border:1px solid #111;
+      background:transparent;
+      padding:10px 18px;
+      cursor:pointer;
+      font-size:14px;
+      font-weight: 500;
+      border-radius: 50px;
+      transition: all 0.18s ease;
+      white-space:nowrap;
+    }
+    .btn:hover{ background:#111; color:#fff; }
+    .btn.secondary{
+      border-color: var(--border);
+      color: var(--text);
+      background: #fff;
+      box-shadow: var(--shadow2);
+    }
+    .btn.secondary:hover{ border-color:#111; }
+
+    .header-note{
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow2);
+    }
+
+    /* --- layout --- */
+    .wrap{
+      max-width: 1500px;
+      margin: 100px auto 34px; /* leave room for topbar */
+      padding: 0 40px;
+      position: relative;
+    }
+
+    /* subtle portal-like decoration */
+    .wrap::before,
+    .wrap::after{
+      content:"";
+      position:absolute;
+      inset:auto;
+      width: 320px;
+      height: 420px;
+      border-radius: 10px;
+      opacity: 0.55;
+      filter: blur(0px);
+      z-index: -1;
+    }
+    .wrap::before{
+      background:#c7d2fe;
+      top: -26px;
+      left: -30px;
+      transform: rotate(-8deg);
+    }
+    .wrap::after{
+      background:#fecaca;
+      top: 30px;
+      right: -34px;
+      transform: rotate(-2deg);
+    }
+
+    h1{
+      font-size: 18px;
+      margin: 0 0 8px;
+      letter-spacing: .2px;
+    }
+
+    .hint{
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 14px;
+      max-width: 980px;
+    }
+
+    /* --- pills & chips --- */
+    .pill{
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background:#fff;
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: var(--shadow2);
+    }
+    .pill.key{ background: var(--chip); color: var(--text); }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono","Courier New", monospace;
+    }
+
+    .hr{ height:1px; background: var(--border); margin: 14px 0; }
+
+    /* --- cards --- */
+    .card{
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+
+    .field{ grid-column: span 3; }
+    .field.w4{ grid-column: span 4; }
+    .field.w6{ grid-column: span 6; }
+    .field.w12{ grid-column: span 12; }
+
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea, button { font: inherit; }
+
+    input, select, textarea{
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background:#fff;
+      color: var(--text);
+      outline:none;
+      transition: box-shadow .16s ease, border-color .16s ease;
+    }
+
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(17,17,17,.55);
+      box-shadow: 0 0 0 3px rgba(17,17,17,.12);
+    }
+
+    textarea{ min-height: 160px; resize: vertical; }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap: wrap;
+    }
+
+    .smallnote{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .out{
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .status{ font-size: 12.5px; }
+    .status.good{ color: var(--good); }
+    .status.bad{ color: var(--bad); }
+
+    button.primary{
+      border-color:#111;
+      background:#111;
+      color:#fff;
+      box-shadow: 0 0 0 3px rgba(17,17,17,.10);
+    }
+    button.primary:hover{ opacity: .9; }
+
+    button.danger{
+      border-color: rgba(220,38,38,.55);
+      box-shadow: 0 0 0 3px rgba(220,38,38,.10);
+    }
+
+
+    /* --- Quick Start Stepper --- */
+    .qs{
+      margin: 10px 0 14px;
+      padding: 12px 12px;
+      border: 1px dashed rgba(17,17,17,.18);
+      border-radius: 16px;
+      background: rgba(255,255,255,.75);
+      box-shadow: var(--shadow2);
+    }
+    .qs-head{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .qs-head .title{
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .2px;
+    }
+    .qs-head .meta{
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .qs-steps{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .qs-step{
+      display:flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background:#fff;
+      min-width: 0;
+      width: 100%;
+      position: relative;
+    }
+
+    .qs-dot{
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border: 1px solid rgba(17,17,17,.25);
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 12px;
+      flex: 0 0 auto;
+      background: #fff;
+    }
+
+    .qs-text b{
+      display:block;
+      font-size: 12.5px;
+      letter-spacing:.15px;
+      margin-bottom: 2px;
+    }
+    .qs-text span{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .qs-step.todo{
+      opacity: .78;
+      border-style: dashed;
+    }
+    .qs-step.active{
+      border-color:#111;
+      box-shadow: 0 0 0 3px rgba(17,17,17,.08);
+    }
+    .qs-step.done{
+      border-color: rgba(22,163,74,.55);
+    }
+    .qs-step.done .qs-dot{
+      border-color: rgba(22,163,74,.55);
+      color: var(--good);
+    }
+
+    .qs-tip{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .qs-step.clickable{
+      cursor:pointer;
+      user-select:none;
+    }
+    .qs-step.clickable:hover{
+      background: #fff;
+      border-color:#111;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 26px rgba(0,0,0,0.08);
+    }
+
+    /* anchor offsets for fixed topbar */
+    .anchor{
+      position: relative;
+      top: -96px;
+      height: 0;
+      width: 0;
+      /* IMPORTANT: anchors sit inside .grid; force full-row so they don't occupy a grid column */
+      grid-column: 1 / -1;
+    }
+
+    /* scroll target highlight */
+    .focus-ring{
+      outline: 2px solid rgba(17,17,17,0.22);
+      outline-offset: 6px;
+      border-radius: 18px;
+      transition: outline-color .25s ease;
+    }
+
+
+    @media (max-width: 640px){
+      .qs-steps{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .qs{ padding: 10px 10px; }
+    }
+
+    /* --- tabs (match portal clean look) --- */
+    .tabs{
+      display:flex;
+      gap:10px;
+      margin: 16px 0 16px;
+      flex-wrap:wrap;
+    }
+
+    .tab{
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor:pointer;
+      color: var(--muted);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      user-select:none;
+      transition: all .18s ease;
+    }
+
+    .tab:hover{ border-color:#111; color: var(--text); }
+
+    .tab.active{
+      color: var(--text);
+      border-color:#111;
+      box-shadow: 0 0 0 3px rgba(17,17,17,.10);
+    }
+
+    .sectionTitle{
+      font-size: 13px;
+      color: var(--text);
+      margin: 6px 0 2px;
+      font-weight: 650;
+      letter-spacing:.2px;
+    }
+
+    .tablewrap{
+      overflow:auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background:#fff;
+      box-shadow: var(--shadow2);
+    }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+    }
+
+    th, td{
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      vertical-align: top;
+    }
+
+    th{
+      color: var(--muted);
+      text-align:left;
+      position: sticky;
+      top: 0;
+      background:#fff;
+      z-index: 2;
+    }
+
+    .right{ text-align:right; }
+
+    /* --- stage stack cell --- */
+    .cellStack{
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 240px;
+    }
+
+    .stackRow{
+      display:grid;
+      grid-template-columns: 52px 1fr;
+      gap: 8px;
+      align-items:center;
+    }
+
+    .stackRow .k{
+      font-size: 11px;
+      color: var(--muted);
+      text-align:right;
+      white-space: nowrap;
+    }
+
+    .stackRow input, .stackRow select{
+      padding: 8px 9px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .netBox{
+      display:flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 220px;
+    }
+
+    .netVal{
+      font-size: 16px;
+      font-weight: 850;
+      letter-spacing: .2px;
+    }
+
+    .netWarn{
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+    .netWarn.bad{ color: var(--bad); }
+    .netWarn.good{ color: var(--good); }
+
+    /* Mobile */
+    @media (max-width: 768px){
+      .topbar{ padding: 0 20px; }
+      .wrap{ padding: 0 20px; margin: 92px auto 22px; }
+      .brand small{ display:none; }
+    }
+
+    @media (max-width: 640px){
+      .wrap{ padding: 0 12px; }
+      h1{ font-size: 16px; line-height: 1.35; }
+      .hint{ font-size: 12px; }
+      .tabs{ gap: 8px; margin: 10px 0 12px; }
+      .tab{ padding: 8px 10px; font-size: 12px; }
+      .card{ padding: 12px; border-radius: 14px; }
+      .grid{ grid-template-columns: 1fr; gap: 10px; }
+      .field, .field.w4, .field.w6, .field.w12{ grid-column: span 12 !important; }
+      input, select, textarea{ padding: 12px 12px; font-size: 14px; border-radius: 12px; }
+      label{ font-size: 12px; margin-bottom: 5px; }
+      .row{ gap: 8px; }
+      .pill{ font-size: 12px; padding: 6px 8px; white-space: normal; line-height: 1.35; }
+      table{ min-width: 980px; }
+      .cellStack{ min-width: 220px; }
+    }
+  </style>
+
+  <!-- Cloudflare Web Analytics (replace token with your site's token) -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon='{"token":"PASTE_YOUR_CLOUDFLARE_TOKEN_HERE"}'></script>
+  <!-- End Cloudflare Web Analytics -->
+
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">ChengLab · Wu <small>Injection Calculator</small></div>
+    <div class="top-actions">
+      <span class="header-note" id="header_log_hint">Records: 0</span>
+      <button class="btn secondary" type="button" onclick="location.href='../index.html'">Back</button>
+      <button class="btn" id="header_export_csv" type="button">Export CSV</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <h1>注射净活度计算（逐针时间/逐针本底：读数 − 本底，校正到注射时刻）</h1>
+    <div class="hint">
+      计算逻辑：<span class="mono">Split@Inj = (分针读数−分针本底)</span> 衰变校正到注射时刻；<span class="mono">Empty@Inj = (空针读数−空针本底)</span> 从空针测量时刻回推到注射时刻；<span class="mono">Net = Split@Inj − Empty@Inj</span>。支持任意 N 次注射并合计。
+    </div>
+
+    <!-- 实验信息 -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="row">
+        <span class="pill">实验元数据（写入记录与 CSV）</span>
+        <span class="smallnote">修改后会保存为“当前默认值”。记录保存在浏览器本地（localStorage）。</span>
+      </div>
+      <div class="hr"></div>
+
+      <div class="grid">
+        <div class="field w4">
+          <label>探针名称（Probe）</label>
+          <input id="exp_probe" placeholder="例如：⁶⁸Ga-FAPI / ¹⁸F-FDG / ⁸⁹Zr-..." />
+        </div>
+        <div class="field w4">
+          <label>实验日期（Date）</label>
+          <input id="exp_date" type="date" />
+        </div>
+        <div class="field w4">
+          <label>肿瘤细胞系 / 动物模型（Model）</label>
+          <input id="exp_cellline" placeholder="例如：4T1 / CT26 / BxPC-3 ..." />
+        </div>
+
+        <!-- 时间点计划 -->
+        <div class="field w12">
+          <div class="hr"></div>
+          <div class="row" style="margin-bottom:6px;">
+            <span class="pill">时间点计划（基于 N 次“注射时刻”的平均值）</span>
+            <span class="smallnote">平均注射时间 = (Injection1 + … + InjectionN) / N；试验时间 = Avg + 30/60/120 min。</span>
+          </div>
+          <div class="grid">
+            <div class="field w4">
+              <label>平均注射时间（Avg Inj）</label>
+              <input id="plan_avg" class="mono" readonly placeholder="请在下方逐针填写注射时刻" />
+            </div>
+            <div class="field w4">
+              <label>+30 min</label>
+              <input id="plan_30" class="mono" readonly />
+            </div>
+            <div class="field w4">
+              <label>+60 min</label>
+              <input id="plan_60" class="mono" readonly />
+            </div>
+            <div class="field w4">
+              <label>+120 min</label>
+              <input id="plan_120" class="mono" readonly />
+            </div>
+            <div class="field w12">
+              <div id="plan_status" class="status mono">提示：请填写每针的“注射时刻”，系统会自动计算平均注射时间及 30/60/120 min 时间点。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="inj">注射净活度（N 次）</div>
+      <div class="tab" data-tab="decay">衰变计算（A0 → At）</div>
+      <div class="tab" data-tab="iso">核素表（JSON 可维护）</div>
+      <div class="tab" data-tab="log">计算记录（CSV 导出）</div>
+    </div>
+
+    <!-- 注射净活度 -->
+    <div id="inj" class="card">
+      <div class="row">
+        <span class="pill">单位换算：Bq / MBq / µCi / mCi</span>
+        <span class="pill mono">At = A0 · exp(-ln2 · Δt / T1/2)</span>
+      </div>
+      <div class="hr"></div>
+
+      <div class="qs" id="quick_start">
+        <div class="qs-head">
+          <div class="title">Quick Start</div>
+          <div class="meta mono" id="qs_meta">Step 1/4</div>
+        </div>
+
+        <div class="qs-steps">
+          <div class="qs-step todo clickable" id="qs1" data-target="sec_nuclide">
+            <div class="qs-dot">1</div>
+            <div class="qs-text">
+              <b>选择核素</b>
+              <span>从下拉选择 PET/SPECT/Therapy 核素，系统自动填半衰期。</span>
+            </div>
+          </div>
+
+          <div class="qs-step todo clickable" id="qs2" data-target="sec_config">
+            <div class="qs-dot">2</div>
+            <div class="qs-text">
+              <b>设置注射次数与单位</b>
+              <span>选择 N 次注射，并确认输入单位与输出单位（建议统一）。</span>
+            </div>
+          </div>
+
+          <div class="qs-step todo clickable" id="qs3" data-target="sec_table">
+            <div class="qs-dot">3</div>
+            <div class="qs-text">
+              <b>逐针填写时间与读数</b>
+              <span>补全每针分针/注射/空针时间与读数，本底可为 0。</span>
+            </div>
+          </div>
+
+          <div class="qs-step todo clickable" id="qs4" data-target="sec_summary">
+            <div class="qs-dot">4</div>
+            <div class="qs-text">
+              <b>确认合计并保存</b>
+              <span>检查净注射合计与警告提示，保存记录或导出 CSV。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="qs-tip mono" id="qs_tip">提示：点击步骤可跳转到对应区域；完成后会自动点亮下一步。</div>
+      </div>
+
+
+      <div class="grid">
+        <div id="sec_nuclide" class="anchor"></div>
+        <div class="field w4">
+          <label>核素（按类别分组）</label>
+          <select id="inj_iso"></select>
+        </div>
+        <div class="field w4">
+          <label>半衰期 T1/2（秒，自动随核素切换）</label>
+          <input id="inj_hl" class="mono" type="number" step="any" />
+        </div>
+        <div class="field w4">
+          <label>输出单位（结果/合计）</label>
+          <select id="inj_out_unit">
+            <option value="MBq">MBq</option>
+            <option value="Bq">Bq</option>
+            <option value="mCi">mCi</option>
+            <option value="uCi">µCi</option>
+          </select>
+        </div>
+
+        <div id="sec_config" class="anchor"></div>
+
+        <div class="field w12">
+          <div class="row" style="justify-content: space-between;">
+            <div class="row">
+              <span class="pill">注射次数 N</span>
+              <select id="inj_count" style="max-width: 140px;"></select>
+              <button id="inj_add" class="primary" type="button">+ 添加一针</button>
+              <button id="inj_remove" class="danger" type="button">− 删除最后一针</button>
+            </div>
+            <div class="row">
+              <span class="pill">读数输入单位（逐针一致时建议统一）</span>
+              <select id="inj_in_unit" style="max-width:120px;">
+                <option value="uCi">µCi</option>
+                <option value="mCi">mCi</option>
+                <option value="MBq">MBq</option>
+                <option value="Bq">Bq</option>
+              </select>
+              <span class="smallnote">该单位用于分针/空针读数与本底的输入。</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="sec_table" class="anchor"></div>
+
+        <div class="field w12">
+          <div class="hr"></div>
+          <div class="sectionTitle">注射记录表（推荐排版：分针测量 → 注射 → 空针测量 → 净注射量）</div>
+
+          <div class="tablewrap" style="margin-top:10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:56px;">#</th>
+                  <th>分针测量（时间 / 读数 / 本底）</th>
+                  <th style="min-width:220px;">注射（时刻 / 单位）</th>
+                  <th>空针测量（时间 / 读数 / 本底）</th>
+                  <th style="min-width:240px;">净注射量（自动）</th>
+                </tr>
+              </thead>
+              <tbody id="inj_tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="smallnote" style="margin-top:10px;">
+            术语：分针读数=注射前分装针活度读数；空针读数=注射后空针残余活度读数；本底=该次测量对应背景读数。每针时间与本底可不同。
+          </div>
+        </div>
+
+        <div class="field w12"><div class="hr"></div></div>
+
+        <div id="sec_summary" class="anchor"></div>
+
+        <div class="field w12">
+          <label>状态</label>
+          <div id="inj_status" class="status mono">-</div>
+        </div>
+
+        <div class="field w12">
+          <label>合计净注射量（N 次求和）</label>
+          <div class="row">
+            <div class="pill out">净注射合计：<span class="mono" id="net_sum">-</span></div>
+            <button class="primary" id="inj_save" type="button">保存记录</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 衰变计算 -->
+    <div id="decay" class="card" style="display:none;">
+      <div class="row"><span class="pill mono">At = A0 · exp(-ln2 · Δt / T1/2)</span></div>
+      <div class="hr"></div>
+      <div class="grid">
+        <div class="field w4"><label>核素（按类别分组）</label><select id="dec_iso"></select></div>
+        <div class="field w4"><label>半衰期 T1/2（秒，自动随核素切换）</label><input id="dec_hl" class="mono" type="number" step="any" /></div>
+        <div class="field w4">
+          <label>输出单位</label>
+          <select id="dec_out_unit">
+            <option value="MBq">MBq</option>
+            <option value="Bq">Bq</option>
+            <option value="mCi">mCi</option>
+            <option value="uCi">µCi</option>
+          </select>
+        </div>
+
+        <div class="field w6">
+          <label>A0（输入）</label>
+          <div class="row">
+            <input id="dec_a0" type="number" step="any" value="1" />
+            <select id="dec_a0_unit" style="max-width:120px;">
+              <option value="mCi">mCi</option>
+              <option value="uCi">µCi</option>
+              <option value="MBq">MBq</option>
+              <option value="Bq">Bq</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field w6">
+          <label>设备标定系数（可选）</label>
+          <input id="dec_cal" class="mono" type="number" step="any" value="163.1" />
+        </div>
+
+        <div class="field w6"><label>起始时间（t0）</label><input id="dec_t0" type="datetime-local" /></div>
+        <div class="field w6"><label>结束时间（t1）</label><input id="dec_t1" type="datetime-local" /></div>
+
+        <div class="field w12"><label>状态</label><div id="dec_status" class="status mono">-</div></div>
+
+        <div class="field w12">
+          <label>结果</label>
+          <div class="row">
+            <div class="pill">Δt 秒：<span class="mono" id="dec_dt">-</span></div>
+            <div class="pill">At（输出单位）：<span class="mono" id="dec_at">-</span></div>
+            <div class="pill">At（Bq）：<span class="mono" id="dec_bq">-</span></div>
+            <div class="pill">Bq / cal：<span class="mono" id="dec_bq_div">-</span></div>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <button class="primary" id="dec_save" type="button">保存记录</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 核素表 JSON -->
+    <div id="iso" class="card" style="display:none;">
+      <div class="row">
+        <span class="pill">核素表 JSON（可编辑）</span>
+        <span class="pill">字段：name、half_life_s、category（可选）、label（可选）</span>
+      </div>
+      <div class="hr"></div>
+      <div class="grid">
+        <div class="field w12">
+          <label>核素表（JSON 数组）</label>
+          <textarea id="iso_json" class="mono"></textarea>
+          <div class="hint">category 可用：PET / SPECT / Therapy / Other。若不填 label，将自动生成（支持 99mTc → ⁹⁹ᵐTc）。</div>
+        </div>
+        <div class="field w12">
+          <div class="row">
+            <button class="primary" id="iso_apply" type="button">校验并应用</button>
+            <button id="iso_reset" type="button">恢复默认</button>
+            <span id="iso_status" class="status mono">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 记录与导出 -->
+    <div id="log" class="card" style="display:none;">
+      <div class="row"><span class="pill">计算记录</span><span class="pill">结构化 CSV（按列导出）</span></div>
+      <div class="hr"></div>
+      <div class="row" style="margin-bottom:10px;">
+        <button class="primary" id="export_csv" type="button">导出 CSV</button>
+        <button id="clear_log" type="button">清空记录</button>
+        <span class="hint">记录保存在浏览器本地（localStorage）。</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>时间戳</th>
+              <th>探针</th>
+              <th>日期</th>
+              <th>模型</th>
+              <th>核素</th>
+              <th>N</th>
+              <th>平均注射时间</th>
+              <th>+30</th>
+              <th>+60</th>
+              <th>+120</th>
+              <th>合计净注射</th>
+              <th class="right">备注</th>
+            </tr>
+          </thead>
+          <tbody id="log_tbody"></tbody>
+        </table>
+      </div>
+      <div class="smallnote" style="margin-top:10px;">
+        明细字段较多，建议以 CSV 为准；页面表格为快速概览。逐针明细已以 injections_json 字段写入 CSV（可用于后处理/统计）。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========= isotope label helpers ========= */
+    const SUP = { "0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹" };
+    function toSuperscriptDigits(numStr){
+      return String(numStr).split("").map(ch => SUP[ch] ?? ch).join("");
+    }
+    function makeStandardIsotopeLabel(name){
+      const s = String(name).trim();
+      const m = s.match(/^([A-Za-z]+)(\d+)(m)?$/);
+      if (m){
+        const element = m[1];
+        const mass = m[2];
+        const isMeta = !!m[3];
+        return `${toSuperscriptDigits(mass)}${isMeta ? "ᵐ" : ""}${element}`;
+      }
+      return s;
+    }
+
+    /* ========= constants ========= */
+    const DEFAULT_ISOTOPES = [
+      { name:"Ga68",  half_life_s:4062.60,   category:"PET",     label: makeStandardIsotopeLabel("Ga68") },
+      { name:"F18",   half_life_s:6586.26,   category:"PET",     label: makeStandardIsotopeLabel("F18") },
+      { name:"Cu64",  half_life_s:45723.60,  category:"PET",     label: makeStandardIsotopeLabel("Cu64") },
+      { name:"Zr89",  half_life_s:282276.00, category:"PET",     label: makeStandardIsotopeLabel("Zr89") },
+      { name:"Tc99m", half_life_s:21624.12,  category:"SPECT",   label: makeStandardIsotopeLabel("Tc99m") },
+      { name:"In111", half_life_s:242326.08, category:"SPECT",   label: makeStandardIsotopeLabel("In111") },
+      { name:"Lu177", half_life_s:574300.80, category:"Therapy", label: makeStandardIsotopeLabel("Lu177") },
+      { name:"I131",  half_life_s:692988.48, category:"Therapy", label: makeStandardIsotopeLabel("I131") },
+      { name:"Ac225", half_life_s:857088.00, category:"Therapy", label: makeStandardIsotopeLabel("Ac225") },
+      { name:"C11",   half_life_s:1220.04,   category:"PET",     label: makeStandardIsotopeLabel("C11") },
+    ];
+
+    const ln2 = Math.log(2);
+    const UNIT_TO_BQ = { "Bq":1, "MBq":1e6, "uCi":3.7e4, "mCi":3.7e7 };
+
+    function toBq(value, unit){
+      const v = Number(value);
+      return (isFinite(v) && (unit in UNIT_TO_BQ)) ? v * UNIT_TO_BQ[unit] : NaN;
+    }
+    function fromBq(bq, unit){
+      return (isFinite(bq) && (unit in UNIT_TO_BQ)) ? bq / UNIT_TO_BQ[unit] : NaN;
+    }
+
+    function parseDTLocal(v){
+      if (!v) return null;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    function dtSeconds(t1, t0){
+      return (!t1 || !t0) ? NaN : (t1.getTime() - t0.getTime()) / 1000;
+    }
+    function decay(A0, dt, hl){
+      if (!isFinite(A0) || !isFinite(dt) || !isFinite(hl) || hl <= 0) return NaN;
+      return A0 * Math.exp(-ln2 * (dt / hl));
+    }
+
+    function isoLocalString(d){
+      if (!d) return "";
+      const pad = (n) => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+    function fmtDateTimeLocal(d){
+      if (!d) return "";
+      const pad = (n) => String(n).padStart(2,"0");
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function fmtFullDT(d){
+      if (!d) return "";
+      const pad = (n) => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function nowDTLocalInput(){
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    /* ========= storage ========= */
+    const LOG_KEY = "radio_calc_logs_v5_table_stack";
+    const EXP_KEY = "radio_calc_current_experiment_v2";
+    const N_KEY   = "radio_calc_injection_count_v2";
+
+    function loadLog(){
+      try { return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); }
+      catch { return []; }
+    }
+    function saveLog(list){ localStorage.setItem(LOG_KEY, JSON.stringify(list)); }
+
+    function addLogRow(row){
+      const logs = loadLog();
+      logs.unshift(row);
+      saveLog(logs);
+      updateHeaderCount();
+    }
+
+    function loadExperiment(){
+      try {
+        const raw = localStorage.getItem(EXP_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+    function saveExperiment(obj){ localStorage.setItem(EXP_KEY, JSON.stringify(obj)); }
+
+    function updateHeaderCount(){
+      document.getElementById("header_log_hint").textContent = `当前记录数：${loadLog().length}`;
+    }
+
+    function escapeCSV(s){
+      const str = String(s ?? "");
+      if (/[",\n]/.test(str)) return `"${str.replace(/"/g,'""')}"`;
+      return str;
+    }
+    function escapeHTML(s){
+      return String(s ?? "")
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+
+    /* ========= tabs ========= */
+    document.querySelectorAll(".tab").forEach(t => {
+      t.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        const tab = t.dataset.tab;
+        ["inj","decay","iso","log"].forEach(id => {
+          document.getElementById(id).style.display = (id === tab) ? "" : "none";
+        });
+        if (tab === "log") renderLogOverview();
+      });
+    });
+
+    /* ========= isotopes grouped ========= */
+    let isotopes = [];
+
+    function normalizeCategory(cat){
+      const s = String(cat || "").trim().toUpperCase();
+      if (s === "PET") return "PET";
+      if (s === "SPECT") return "SPECT";
+      if (s === "THERAPY") return "Therapy";
+      if (s === "OTHER") return "Other";
+      return "Other";
+    }
+
+    function groupedOptHTML(list){
+      const order = ["PET","SPECT","Therapy","Other"];
+      const groupMap = new Map();
+      order.forEach(k => groupMap.set(k, []));
+      list.forEach(x => {
+        const cat = normalizeCategory(x.category);
+        groupMap.get(cat).push(x);
+      });
+
+      const out = [];
+      for (const cat of order){
+        const arr = groupMap.get(cat) || [];
+        if (!arr.length) continue;
+        out.push(`<optgroup label="${cat}">`);
+        arr.forEach(x => {
+          const label = x.label ? String(x.label) : makeStandardIsotopeLabel(x.name);
+          out.push(`<option value="${x.name}">${label}</option>`);
+        });
+        out.push(`</optgroup>`);
+      }
+      return out.join("");
+    }
+
+    function setIsotopes(list){
+      isotopes = list.slice();
+
+      const injSel = document.getElementById("inj_iso");
+      const decSel = document.getElementById("dec_iso");
+
+      const prevInj = injSel.value;
+      const prevDec = decSel.value;
+
+      const html = groupedOptHTML(isotopes);
+      injSel.innerHTML = html;
+      decSel.innerHTML = html;
+
+      // 尽量保留之前选择
+      if (prevInj && isotopes.some(x => x.name === prevInj)) injSel.value = prevInj;
+      if (prevDec && isotopes.some(x => x.name === prevDec)) decSel.value = prevDec;
+
+      // 若为空则选第一个
+      if (!injSel.value && isotopes.length) injSel.value = isotopes[0].name;
+      if (!decSel.value && isotopes.length) decSel.value = isotopes[0].name;
+
+      syncHL("inj");
+      syncHL("dec");
+      calcAll();
+    }
+
+    function syncHL(which){
+      const sel = (which === "inj") ? document.getElementById("inj_iso") : document.getElementById("dec_iso");
+      const hl  = (which === "inj") ? document.getElementById("inj_hl")  : document.getElementById("dec_hl");
+      const found = isotopes.find(x => x.name === sel.value);
+      if (found) hl.value = found.half_life_s;
+    }
+
+    function initIsoJSON(){
+      document.getElementById("iso_json").value = JSON.stringify(DEFAULT_ISOTOPES, null, 2);
+    }
+
+    document.getElementById("iso_apply").addEventListener("click", () => {
+      const status = document.getElementById("iso_status");
+      try{
+        const parsed = JSON.parse(document.getElementById("iso_json").value);
+        if (!Array.isArray(parsed)) throw new Error("JSON 顶层必须是数组。");
+        const cleaned = parsed.map((x, i) => {
+          const name = String(x?.name ?? "").trim();
+          const hl = Number(x?.half_life_s);
+          const category = normalizeCategory(x?.category);
+          const labelRaw = (x && typeof x === "object" && "label" in x) ? String(x.label ?? "").trim() : "";
+          if (!name) throw new Error(`第 ${i+1} 项缺少 name。`);
+          if (!isFinite(hl) || hl <= 0) throw new Error(`第 ${i+1} 项 half_life_s 无效。`);
+          const label = labelRaw || makeStandardIsotopeLabel(name);
+          return { name, half_life_s: hl, category, label };
+        });
+        setIsotopes(cleaned);
+        status.textContent = "OK：已应用核素表（含类别分组）。";
+        status.className = "status mono good";
+      } catch(e){
+        status.textContent = "错误：" + (e?.message ?? String(e));
+        status.className = "status mono bad";
+      }
+    });
+
+    document.getElementById("iso_reset").addEventListener("click", () => {
+      initIsoJSON();
+      setIsotopes(DEFAULT_ISOTOPES);
+      const status = document.getElementById("iso_status");
+      status.textContent = "已恢复默认核素表。";
+      status.className = "status mono good";
+    });
+
+    /* ========= experiment info ========= */
+    function initExperimentInfo(){
+      const saved = loadExperiment();
+      const exp_probe = document.getElementById("exp_probe");
+      const exp_date = document.getElementById("exp_date");
+      const exp_cellline = document.getElementById("exp_cellline");
+
+      if (saved){
+        exp_probe.value = saved.probe_name ?? "";
+        exp_date.value = saved.exp_date ?? "";
+        exp_cellline.value = saved.model ?? "";
+      } else {
+        const today = new Date();
+        const pad = (n) => String(n).padStart(2,"0");
+        exp_date.value = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+      }
+    }
+
+    function readExperimentInfo(){
+      const obj = {
+        probe_name: (document.getElementById("exp_probe").value || "").trim(),
+        exp_date: document.getElementById("exp_date").value || "",
+        model: (document.getElementById("exp_cellline").value || "").trim()
+      };
+      saveExperiment(obj);
+      return obj;
+    }
+
+    ["input","change"].forEach(evt => {
+      document.getElementById("exp_probe").addEventListener(evt, () => { readExperimentInfo(); });
+      document.getElementById("exp_date").addEventListener(evt, () => { readExperimentInfo(); });
+      document.getElementById("exp_cellline").addEventListener(evt, () => { readExperimentInfo(); });
+    });
+
+    /* ========= N injection table (3-stage stack) ========= */
+    const MIN_N = 1;
+    const MAX_N = 20;
+
+    function getSavedN(){
+      const x = Number(localStorage.getItem(N_KEY) || "");
+      if (isFinite(x) && x >= MIN_N && x <= MAX_N) return x;
+      return 3;
+    }
+    function saveN(n){ localStorage.setItem(N_KEY, String(n)); }
+
+    function fillNOptions(){
+      const sel = document.getElementById("inj_count");
+      const opts = [];
+      for (let i = MIN_N; i <= MAX_N; i++) opts.push(`<option value="${i}">${i}</option>`);
+      sel.innerHTML = opts.join("");
+      sel.value = String(getSavedN());
+    }
+
+    function getN(){
+      const v = Number(document.getElementById("inj_count").value);
+      if (isFinite(v) && v >= MIN_N && v <= MAX_N) return v;
+      return getSavedN();
+    }
+
+    function injRowHTML(i, nowStr){
+      return `
+        <tr>
+          <td class="mono">${i}</td>
+
+          <td>
+            <div class="cellStack">
+              <div class="stackRow">
+                <div class="k">时间</div>
+                <input data-k="t_before" data-i="${i}" type="datetime-local" value="${nowStr}">
+              </div>
+              <div class="stackRow">
+                <div class="k">读数</div>
+                <input data-k="s_dose" data-i="${i}" type="number" step="any" value="${i===1 ? 65 : 0}">
+              </div>
+              <div class="stackRow">
+                <div class="k">本底</div>
+                <input data-k="s_bg" data-i="${i}" type="number" step="any" value="0">
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <div class="cellStack" style="min-width:220px;">
+              <div class="stackRow">
+                <div class="k">注射</div>
+                <input data-k="t_inj" data-i="${i}" type="datetime-local" value="${nowStr}">
+              </div>
+              <div class="stackRow">
+                <div class="k">单位</div>
+                <select data-k="unit" data-i="${i}">
+                  <option value="uCi">µCi</option>
+                  <option value="mCi">mCi</option>
+                  <option value="MBq">MBq</option>
+                  <option value="Bq">Bq</option>
+                </select>
+              </div>
+              <div class="smallnote mono" data-out="dt_s" data-i="${i}">Δt(分针→注射): - s</div>
+              <div class="smallnote mono" data-out="dt_e" data-i="${i}">Δt(空针→注射): - s</div>
+            </div>
+          </td>
+
+          <td>
+            <div class="cellStack">
+              <div class="stackRow">
+                <div class="k">时间</div>
+                <input data-k="t_after" data-i="${i}" type="datetime-local" value="${nowStr}">
+              </div>
+              <div class="stackRow">
+                <div class="k">读数</div>
+                <input data-k="e_dose" data-i="${i}" type="number" step="any" value="${i===1 ? 1 : 0}">
+              </div>
+              <div class="stackRow">
+                <div class="k">本底</div>
+                <input data-k="e_bg" data-i="${i}" type="number" step="any" value="0">
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <div class="netBox">
+              <div class="netVal mono" data-out="net" data-i="${i}">-</div>
+              <div class="netWarn mono" data-out="warn" data-i="${i}"></div>
+              <div class="smallnote mono" data-out="debug" data-i="${i}"></div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderInjTable(n){
+      const tb = document.getElementById("inj_tbody");
+      const nowStr = nowDTLocalInput();
+      const rows = [];
+      for (let i = 1; i <= n; i++) rows.push(injRowHTML(i, nowStr));
+      tb.innerHTML = rows.join("");
+
+      // 初始化每行单位 = 全局输入单位
+      const globalUnit = document.getElementById("inj_in_unit").value;
+      document.querySelectorAll(`#inj_tbody select[data-k="unit"]`).forEach(sel => sel.value = globalUnit);
+
+      // 绑定事件：任意输入变化立即重算
+      tb.querySelectorAll("input, select").forEach(el => {
+        el.addEventListener("input", calcAll);
+        el.addEventListener("change", calcAll);
+      });
+    }
+
+    function setOut(i, key, text, cls){
+      const el = document.querySelector(`#inj_tbody [data-out="${key}"][data-i="${i}"]`);
+      if (!el) return;
+      el.textContent = text;
+      if (cls){
+        el.classList.remove("bad","good");
+        el.classList.add(cls);
+      } else {
+        el.classList.remove("bad","good");
+      }
+    }
+
+    function readRow(i){
+      const get = (k) => document.querySelector(`#inj_tbody [data-k="${k}"][data-i="${i}"]`);
+      const tBefore = parseDTLocal(get("t_before").value);
+      const tInj    = parseDTLocal(get("t_inj").value);
+      const tAfter  = parseDTLocal(get("t_after").value);
+
+      const sDose = Number(get("s_dose").value);
+      const sBg   = Number(get("s_bg").value);
+      const eDose = Number(get("e_dose").value);
+      const eBg   = Number(get("e_bg").value);
+
+      const unit = get("unit").value;
+
+      return { i, tBefore, tInj, tAfter, sDose, sBg, eDose, eBg, unit };
+    }
+
+    function calcOne(i){
+      const hl = Number(document.getElementById("inj_hl").value);
+      const outUnit = document.getElementById("inj_out_unit").value;
+
+      if (!isFinite(hl) || hl <= 0) return { ok:false, msg:`注射${i}：半衰期无效` };
+
+      const r = readRow(i);
+      const { tBefore, tInj, tAfter, sDose, sBg, eDose, eBg, unit } = r;
+
+      if (![sDose,sBg,eDose,eBg].every(x => isFinite(x))) return { ok:false, msg:`注射${i}：读数/本底输入无效` };
+      if (!tBefore || !tInj || !tAfter) return { ok:false, msg:`注射${i}：时间未填全` };
+
+      const sDiff = sDose - sBg;
+      const eDiff = eDose - eBg;
+
+      const sBq0 = toBq(sDiff, unit);
+      const eBqAfter = toBq(eDiff, unit);
+      if (!isFinite(sBq0) || !isFinite(eBqAfter)) return { ok:false, msg:`注射${i}：单位换算失败` };
+
+      const dtS = dtSeconds(tInj, tBefore); // 分针测量 -> 注射
+      const dtE = dtSeconds(tInj, tAfter);  // 空针测量 -> 注射（通常为负，用于回推）
+
+      setOut(i, "dt_s", `Δt(分针→注射): ${isFinite(dtS)?dtS.toFixed(2):"-"} s`);
+      setOut(i, "dt_e", `Δt(空针→注射): ${isFinite(dtE)?dtE.toFixed(2):"-"} s`);
+
+      const sAtInj_Bq = decay(sBq0, dtS, hl);
+      const eAtInj_Bq = decay(eBqAfter, dtE, hl);
+
+      const net_Bq = sAtInj_Bq - eAtInj_Bq;
+
+      const netOut = fromBq(net_Bq, outUnit);
+      setOut(i, "net", `${netOut.toFixed(6)} ${outUnit}`);
+
+      const warn = [];
+      if (sDiff < 0) warn.push("分针差值<0");
+      if (eDiff < 0) warn.push("空针差值<0");
+      if (dtS < 0) warn.push("分针测量晚于注射");
+      if (dtSeconds(tAfter, tInj) < 0) warn.push("空针测量早于注射");
+
+      if (warn.length) setOut(i, "warn", "注意：" + warn.join("；"), "bad");
+      else setOut(i, "warn", "OK", "good");
+
+      // 小调试信息（可删）
+      setOut(i, "debug", `s=(读数-本底)=${sDiff.toFixed(4)} ${unit}；e=(读数-本底)=${eDiff.toFixed(4)} ${unit}`);
+
+      return {
+        ok:true,
+        warn,
+        net_bq: net_Bq,
+        snapshot: {
+          index: i,
+          unit,
+          times: { before: isoLocalString(tBefore), inj: isoLocalString(tInj), after: isoLocalString(tAfter) },
+          split: { reading: sDose, bg: sBg, diff: sDiff },
+          empty: { reading: eDose, bg: eBg, diff: eDiff },
+          dt_s: dtS,
+          dt_e: dtE,
+          net_out: Number(netOut.toFixed(8))
+        }
+      };
+    }
+
+    function calcAllInj(){
+      const n = getN();
+      const errors = [];
+      const warns = [];
+      const snaps = [];
+      let sumBq = 0;
+
+      for (let i = 1; i <= n; i++){
+        const r = calcOne(i);
+        if (!r.ok) errors.push(r.msg);
+        else {
+          sumBq += r.net_bq;
+          snaps.push(r.snapshot);
+          warns.push(...r.warn);
+        }
+      }
+
+      const st = document.getElementById("inj_status");
+      st.className = "status mono";
+
+      if (errors.length){
+        st.textContent = "错误/缺失：" + errors.join("；");
+        st.classList.add("bad");
+        document.getElementById("net_sum").textContent = "-";
+        return { ok:false, n, errors, snaps };
+      }
+
+      const outUnit = document.getElementById("inj_out_unit").value;
+      const sumOut = fromBq(sumBq, outUnit);
+      document.getElementById("net_sum").textContent = `${sumOut.toFixed(6)} ${outUnit}`;
+
+      if (warns.length){
+        st.textContent = "注意：" + Array.from(new Set(warns)).join("；") + "。";
+        st.classList.add("bad");
+      } else {
+        st.textContent = `OK：已完成 ${n} 次注射计算。`;
+        st.classList.add("good");
+      }
+
+      return { ok:true, n, snaps };
+    }
+
+
+    /* ========= Quick Start Stepper ========= */
+    function setQSState(id, state){
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("todo","active","done");
+      el.classList.add(state);
+    }
+
+    function rowInputsComplete(i){
+      const required = ["t_before","t_inj","t_after","s_dose","s_bg","e_dose","e_bg","unit"];
+      for (const k of required){
+        const el = document.querySelector(`#inj_tbody [data-k="${k}"][data-i="${i}"]`);
+        if (!el) return false;
+        if (el.tagName === "SELECT"){
+          if (!el.value) return false;
+        } else {
+          if (k.startsWith("t_")){
+            const d = parseDTLocal(el.value);
+            if (!d) return false;
+          } else {
+            const v = Number(el.value);
+            if (!isFinite(v)) return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function updateQuickStart(){
+      const meta = document.getElementById("qs_meta");
+      const tip  = document.getElementById("qs_tip");
+
+      // Step 1: isotope + valid half-life
+      const isoOk = !!document.getElementById("inj_iso").value;
+      const hlOk  = isFinite(Number(document.getElementById("inj_hl").value)) && Number(document.getElementById("inj_hl").value) > 0;
+      const step1 = isoOk && hlOk;
+
+      // Step 2: N + units
+      const n = getN();
+      const nOk = isFinite(n) && n >= 1;
+      const inUnitOk  = !!document.getElementById("inj_in_unit").value;
+      const outUnitOk = !!document.getElementById("inj_out_unit").value;
+      const step2 = step1 && nOk && inUnitOk && outUnitOk;
+
+      // Step 3: rows completed
+      let completedRows = 0;
+      for (let i=1;i<=n;i++){
+        if (rowInputsComplete(i)) completedRows += 1;
+      }
+      const step3 = step2 && completedRows === n;
+
+      // Step 4: valid calc output (no hard errors)
+      const res = calcAllInj();
+      const netText = document.getElementById("net_sum").textContent || "";
+      const step4 = step3 && res.ok && netText !== "-" && netText.trim() !== "";
+
+      // apply states
+      if (!step1){
+        setQSState("qs1","active");
+        setQSState("qs2","todo");
+        setQSState("qs3","todo");
+        setQSState("qs4","todo");
+        meta.textContent = "Step 1/4";
+        tip.textContent = "提示：先选择核素（半衰期会自动填充）。";
+        return;
+      }
+      setQSState("qs1","done");
+
+      if (!step2){
+        setQSState("qs2","active");
+        setQSState("qs3","todo");
+        setQSState("qs4","todo");
+        meta.textContent = "Step 2/4";
+        tip.textContent = "提示：设置注射次数 N，并确认输入/输出单位。";
+        return;
+      }
+      setQSState("qs2","done");
+
+      if (!step3){
+        setQSState("qs3","active");
+        setQSState("qs4","todo");
+        meta.textContent = "Step 3/4";
+        tip.textContent = `提示：请补全每针时间与读数（已完成 ${completedRows}/${n}）。`;
+        return;
+      }
+      setQSState("qs3","done");
+
+      if (!step4){
+        setQSState("qs4","active");
+        meta.textContent = "Step 4/4";
+        tip.textContent = "提示：检查警告提示与合计净注射量，然后保存记录或导出 CSV。";
+        return;
+      }
+
+      setQSState("qs4","done");
+      meta.textContent = "Done";
+      tip.textContent = "OK：Quick Start 已完成。你可以保存记录或导出 CSV。";
+    }
+    function setInjectionCount(n){
+      n = Math.max(MIN_N, Math.min(MAX_N, Number(n)));
+      document.getElementById("inj_count").value = String(n);
+      saveN(n);
+      renderInjTable(n);
+      calcAll();
+    }
+
+    /* ========= average injection plan ========= */
+    function computeAvgInjectionPlan(){
+      const s = document.getElementById("plan_status");
+      s.className = "status mono";
+
+      const n = getN();
+      const injTimes = [];
+      document.querySelectorAll(`#inj_tbody input[data-k="t_inj"]`).forEach(inp => {
+        const d = parseDTLocal(inp.value);
+        if (d) injTimes.push(d);
+      });
+
+      if (injTimes.length !== n){
+        document.getElementById("plan_avg").value = "";
+        document.getElementById("plan_30").value = "";
+        document.getElementById("plan_60").value = "";
+        document.getElementById("plan_120").value = "";
+        s.textContent = `提示：请填写全部 ${n} 次“注射时刻”，系统会自动计算平均注射时间及 30/60/120 min。`;
+        s.classList.add("bad");
+        return null;
+      }
+
+      const sumMs = injTimes.reduce((acc, d) => acc + d.getTime(), 0);
+      const avgMs = Math.round(sumMs / n);
+      const avg = new Date(avgMs);
+      const t30 = new Date(avgMs + 30 * 60 * 1000);
+      const t60 = new Date(avgMs + 60 * 60 * 1000);
+      const t120 = new Date(avgMs + 120 * 60 * 1000);
+
+      document.getElementById("plan_avg").value = fmtFullDT(avg);
+      document.getElementById("plan_30").value = fmtFullDT(t30);
+      document.getElementById("plan_60").value = fmtFullDT(t60);
+      document.getElementById("plan_120").value = fmtFullDT(t120);
+
+      s.textContent = `OK：已生成 Avg + 30/60/120 min 时间点（基于 ${n} 次注射时刻平均值）。`;
+      s.classList.add("good");
+
+      return { avg, t30, t60, t120 };
+    }
+
+    /* ========= decay tab ========= */
+    function calcDecay(){
+      const hl = Number(document.getElementById("dec_hl").value);
+      const outUnit = document.getElementById("dec_out_unit").value;
+      const A0_Bq = toBq(document.getElementById("dec_a0").value, document.getElementById("dec_a0_unit").value);
+      const t0 = parseDTLocal(document.getElementById("dec_t0").value);
+      const t1 = parseDTLocal(document.getElementById("dec_t1").value);
+      const cal = Number(document.getElementById("dec_cal").value);
+
+      const dec_status = document.getElementById("dec_status");
+      dec_status.className = "status mono";
+
+      if (!isFinite(hl) || hl <= 0){ dec_status.textContent = "错误：半衰期无效。"; dec_status.classList.add("bad"); return; }
+      if (!t0 || !t1){ dec_status.textContent = "提示：请选择起止时间。"; dec_status.classList.add("bad"); return; }
+      if (!isFinite(A0_Bq)){ dec_status.textContent = "错误：A0 或单位无效。"; dec_status.classList.add("bad"); return; }
+
+      const dt = dtSeconds(t1, t0);
+      const At_Bq = decay(A0_Bq, dt, hl);
+      const At_out = fromBq(At_Bq, outUnit);
+      const div = (isFinite(At_Bq) && isFinite(cal) && cal !== 0) ? (At_Bq / cal) : NaN;
+
+      document.getElementById("dec_dt").textContent = dt.toFixed(2);
+      document.getElementById("dec_at").textContent = `${At_out.toFixed(8)} ${outUnit}`;
+      document.getElementById("dec_bq").textContent = At_Bq.toFixed(2);
+      document.getElementById("dec_bq_div").textContent = isFinite(div) ? div.toFixed(6) : "-";
+
+      if (dt < 0){ dec_status.textContent = "注意：结束时间早于起始时间。"; dec_status.classList.add("bad"); }
+      else { dec_status.textContent = "OK：时间顺序合理。"; dec_status.classList.add("good"); }
+    }
+
+    /* ========= unified calc ========= */
+    function calcAll(){
+      calcAllInj();
+      calcDecay();
+      computeAvgInjectionPlan();
+      updateHeaderCount();
+    
+      updateQuickStart();
+    }
+
+    /* ========= log overview ========= */
+    function renderLogOverview(){
+      const logs = loadLog();
+      const tb = document.getElementById("log_tbody");
+      tb.innerHTML = logs.map(r => {
+        return `<tr>
+          <td class="mono">${escapeHTML(r.saved_at || "")}</td>
+          <td>${escapeHTML(r.probe_name || "")}</td>
+          <td class="mono">${escapeHTML(r.exp_date || "")}</td>
+          <td>${escapeHTML(r.model || "")}</td>
+          <td class="mono">${escapeHTML(r.isotope || "")}</td>
+          <td class="mono">${escapeHTML(r.injection_count || "")}</td>
+          <td class="mono">${escapeHTML(r.avg_inj_time || "")}</td>
+          <td class="mono">${escapeHTML(r.tp_30min || "")}</td>
+          <td class="mono">${escapeHTML(r.tp_60min || "")}</td>
+          <td class="mono">${escapeHTML(r.tp_120min || "")}</td>
+          <td class="mono">${escapeHTML(r.net_sum_out || "")}</td>
+          <td class="right">${escapeHTML(r.note || "")}</td>
+        </tr>`;
+      }).join("");
+      updateHeaderCount();
+    }
+
+    /* ========= CSV export ========= */
+    function exportCSVFromLogs(){
+      const logs = loadLog();
+      if (!logs.length){
+        alert("当前没有记录。请先在“注射净活度”或“衰变计算”页点击“保存记录”后再导出。");
+        updateHeaderCount();
+        return;
+      }
+
+      const cols = [
+        "saved_at",
+        "probe_name","exp_date","model",
+        "isotope","half_life_s",
+        "input_unit","out_unit",
+        "injection_count",
+        "avg_inj_time","tp_30min","tp_60min","tp_120min",
+        "net_sum_out",
+        "injections_json",
+        "note"
+      ];
+
+      const lines = [
+        cols.join(","),
+        ...logs.map(r => cols.map(k => escapeCSV(r?.[k])).join(","))
+      ];
+
+      const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `radio_experiment_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("header_export_csv").addEventListener("click", exportCSVFromLogs);
+    document.getElementById("export_csv").addEventListener("click", exportCSVFromLogs);
+
+    document.getElementById("clear_log").addEventListener("click", () => {
+      if (!confirm("确定清空所有记录吗？此操作不可恢复。")) return;
+      localStorage.removeItem(LOG_KEY);
+      renderLogOverview();
+      updateHeaderCount();
+    });
+
+    /* ========= save record (inj) ========= */
+    document.getElementById("inj_save").addEventListener("click", () => {
+      const exp = readExperimentInfo();
+      const iso = document.getElementById("inj_iso").value;
+      const hl = Number(document.getElementById("inj_hl").value);
+      const inUnit = document.getElementById("inj_in_unit").value;
+      const outUnit = document.getElementById("inj_out_unit").value;
+
+      const r = calcAllInj();
+      if (!r.ok){
+        alert("当前输入不完整或存在错误，无法保存记录。请检查时间/读数/本底/单位。");
+        return;
+      }
+
+      const plan = computeAvgInjectionPlan();
+      const avgStr = plan ? fmtFullDT(plan.avg) : "";
+      const t30Str = plan ? fmtFullDT(plan.t30) : "";
+      const t60Str = plan ? fmtFullDT(plan.t60) : "";
+      const t120Str = plan ? fmtFullDT(plan.t120) : "";
+
+      const row = {
+        saved_at: new Date().toISOString(),
+        probe_name: exp.probe_name,
+        exp_date: exp.exp_date,
+        model: exp.model,
+        isotope: iso,
+        half_life_s: hl,
+        input_unit: inUnit,
+        out_unit: outUnit,
+        injection_count: r.n,
+        avg_inj_time: avgStr,
+        tp_30min: t30Str,
+        tp_60min: t60Str,
+        tp_120min: t120Str,
+        net_sum_out: document.getElementById("net_sum").textContent,
+        injections_json: JSON.stringify(r.snaps),
+        note: document.getElementById("inj_status").textContent || ""
+      };
+
+      addLogRow(row);
+      document.querySelector('.tab[data-tab="log"]').click();
+      renderLogOverview();
+    });
+
+    /* ========= save record (decay) ========= */
+    document.getElementById("dec_save").addEventListener("click", () => {
+      calcDecay();
+      const exp = readExperimentInfo();
+      const iso = document.getElementById("dec_iso").value;
+      const hl = Number(document.getElementById("dec_hl").value);
+      const outUnit = document.getElementById("dec_out_unit").value;
+      const note = document.getElementById("dec_status").textContent || "";
+
+      const row = {
+        saved_at: new Date().toISOString(),
+        probe_name: exp.probe_name,
+        exp_date: exp.exp_date,
+        model: exp.model,
+        isotope: iso,
+        half_life_s: hl,
+        input_unit: `${document.getElementById("dec_a0_unit").value}`,
+        out_unit: outUnit,
+        injection_count: "",
+        avg_inj_time: "",
+        tp_30min: "",
+        tp_60min: "",
+        tp_120min: "",
+        net_sum_out: `At=${document.getElementById("dec_at").textContent}`,
+        injections_json: JSON.stringify({
+          type: "decay",
+          A0: `${document.getElementById("dec_a0").value} ${document.getElementById("dec_a0_unit").value}`,
+          t0: document.getElementById("dec_t0").value,
+          t1: document.getElementById("dec_t1").value,
+          dt_s: document.getElementById("dec_dt").textContent,
+          At_out: document.getElementById("dec_at").textContent,
+          At_Bq: document.getElementById("dec_bq").textContent,
+          cal: document.getElementById("dec_cal").value,
+          Bq_div_cal: document.getElementById("dec_bq_div").textContent
+        }),
+        note
+      };
+
+      addLogRow(row);
+      document.querySelector('.tab[data-tab="log"]').click();
+      renderLogOverview();
+    });
+
+    /* ========= bindings ========= */
+    function bindGlobal(){
+      // isotope change -> sync HL
+      document.getElementById("inj_iso").addEventListener("change", () => { syncHL("inj"); calcAll(); });
+      document.getElementById("dec_iso").addEventListener("change", () => { syncHL("dec"); calcAll(); });
+
+      // other controls
+      document.querySelectorAll("#inj_out_unit, #inj_hl, #inj_in_unit").forEach(el => {
+        el.addEventListener("input", () => {
+          // 全局输入单位变化：同步到每行单位选择（避免单位不一致）
+          if (el.id === "inj_in_unit"){
+            const u = document.getElementById("inj_in_unit").value;
+            document.querySelectorAll(`#inj_tbody select[data-k="unit"]`).forEach(sel => sel.value = u);
+          }
+          calcAll();
+        });
+        el.addEventListener("change", () => {
+          if (el.id === "inj_in_unit"){
+            const u = document.getElementById("inj_in_unit").value;
+            document.querySelectorAll(`#inj_tbody select[data-k="unit"]`).forEach(sel => sel.value = u);
+          }
+          calcAll();
+        });
+      });
+
+      document.querySelectorAll("#decay input, #decay select").forEach(el => {
+        if (["dec_iso"].includes(el.id)) return;
+        el.addEventListener("input", calcAll);
+        el.addEventListener("change", calcAll);
+      });
+
+      // N controls
+      document.getElementById("inj_count").addEventListener("change", (e) => {
+        setInjectionCount(Number(e.target.value));
+      });
+      document.getElementById("inj_add").addEventListener("click", () => {
+        const n = getN();
+        setInjectionCount(Math.min(MAX_N, n + 1));
+      });
+      document.getElementById("inj_remove").addEventListener("click", () => {
+        const n = getN();
+        setInjectionCount(Math.max(MIN_N, n - 1));
+      });
+    }
+
+    /* ========= init ========= */
+    function init(){
+      // init N and table
+      fillNOptions();
+      renderInjTable(getSavedN());
+
+      // isotopes
+      initIsoJSON();
+      setIsotopes(DEFAULT_ISOTOPES);
+
+      // experiment defaults
+      initExperimentInfo();
+      readExperimentInfo();
+
+      // bind
+      bindGlobal();
+
+      // initial
+      renderLogOverview();
+      updateHeaderCount();
+      calcAll();
+    }
+
+    init();
+  
+
+    /* ========= Quick Start Stepper: click-to-jump ========= */
+    (function(){
+      const steps = Array.from(document.querySelectorAll('.qs-step.clickable[data-target]'));
+      const focusClass = 'focus-ring';
+
+      function flashTarget(el){
+        if(!el) return;
+        el.classList.add(focusClass);
+        window.setTimeout(()=>el.classList.remove(focusClass), 900);
+      }
+
+      function scrollToTarget(id){
+        const anchor = document.getElementById(id);
+        if(!anchor) return;
+        // anchor handles offset; scroll into view smoothly
+        anchor.scrollIntoView({behavior:'smooth', block:'start'});
+        // try highlight the nearest card section for better product feel
+        const host = anchor.closest('.field') || anchor.closest('.card') || anchor.parentElement;
+        flashTarget(host);
+      }
+
+      steps.forEach(s=>{
+        s.setAttribute('role','button');
+        s.setAttribute('tabindex','0');
+        s.addEventListener('click', ()=> scrollToTarget(s.dataset.target));
+        s.addEventListener('keydown', (e)=>{
+          if(e.key==='Enter' || e.key===' '){
+            e.preventDefault();
+            scrollToTarget(s.dataset.target);
+          }
+        });
+      });
+    })();
+</script>
+</body>
+</html>
